@@ -478,31 +478,6 @@ export default function PRDStudio() {
 
           {/* Right Header Navigation, Active Engine Badge & User Profile */}
           <div className="flex items-center gap-3">
-            {/* View switcher buttons */}
-            <div className="flex items-center p-1 bg-slate-900/90 rounded-xl border border-white/5 text-xs">
-              <button
-                type="button"
-                onClick={() => setCurrentView("dashboard")}
-                className={`px-3 py-1.5 rounded-lg transition-all ${
-                  currentView === "dashboard"
-                    ? "bg-brand-500 text-white font-medium"
-                    : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                Dashboard
-              </button>
-              <button
-                type="button"
-                onClick={() => setCurrentView("generator")}
-                className={`px-3 py-1.5 rounded-lg transition-all ${
-                  currentView === "generator"
-                    ? "bg-brand-500 text-white font-medium"
-                    : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                Workspace PRD
-              </button>
-            </div>
 
             {/* AI Engine Active Pill Badge (Pro shows Ubah & model name, Free only shows AI Engine Active) */}
             {currentUser.plan === "pro" ? (
