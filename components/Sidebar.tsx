@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { SavedPRDProject, AIEngineOption, UserProfile } from "@/lib/types";
-import VercelConnectionModal from "./VercelConnectionModal";
 
 interface SidebarProps {
   currentView?: "dashboard" | "generator";
@@ -34,17 +33,6 @@ export default function Sidebar({
   onLogout,
 }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [isVercelModalOpen, setIsVercelModalOpen] = useState(false);
-  const [supabaseConnected, setSupabaseConnected] = useState(false);
-
-  useEffect(() => {
-    fetch("/api/system-status")
-      .then((r) => r.json())
-      .then((data) => {
-        setSupabaseConnected(Boolean(data.supabase?.connected));
-      })
-      .catch(() => setSupabaseConnected(false));
-  }, []);
 
   const filteredProjects = savedProjects.filter((p) =>
     p.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -256,26 +244,6 @@ export default function Sidebar({
 
       {/* Sidebar Footer: User Account Info & Logout */}
       <div className="shrink-0 mt-auto p-3 border-t border-white/10 bg-slate-950/90">
-        {!isCollapsed && (
-          <div className="mb-2 px-1 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => setIsVercelModalOpen(true)}
-              className="flex items-center gap-1.5 text-[10px] font-mono text-slate-400 hover:text-slate-200 transition-colors"
-              title="Klik untuk konfigurasi Vercel & Supabase"
-            >
-              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${supabaseConnected ? "bg-emerald-400" : "bg-amber-400"}`} />
-              <span>{supabaseConnected ? "Supabase: Cloud" : "Supabase: Offline"}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsVercelModalOpen(true)}
-              className="text-[9px] px-1.5 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors cursor-pointer"
-            >
-              Vercel Env
-            </button>
-          </div>
-        )}
 
         {!isCollapsed ? (
           <div className="flex items-center justify-between text-xs">
@@ -334,12 +302,6 @@ export default function Sidebar({
           </div>
         )}
       </div>
-
-      <VercelConnectionModal
-        isOpen={isVercelModalOpen}
-        onClose={() => setIsVercelModalOpen(false)}
-        onStatusUpdated={(conn) => setSupabaseConnected(conn)}
-      />
     </aside>
   );
 }
