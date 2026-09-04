@@ -153,3 +153,14 @@ SET
   role = EXCLUDED.role,
   plan = EXCLUDED.plan,
   name = EXCLUDED.name;
+
+INSERT INTO public.profiles (id, email, name, username, role, plan)
+VALUES 
+  ('5288bcdc-e821-4276-bcef-9413d1d4261b', 'admin@prdarchitect.com', 'Jonathan (Admin)', 'admin', 'admin', 'pro'),
+  ('f5e174aa-3d50-4446-8890-b63420cb06e0', 'member@prdarchitect.com', 'User Member', 'member', 'member', 'free')
+ON CONFLICT (id) DO UPDATE
+SET 
+  role = EXCLUDED.role,
+  plan = EXCLUDED.plan,
+  name = EXCLUDED.name;
+

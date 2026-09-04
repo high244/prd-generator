@@ -93,45 +93,8 @@ export async function checkSupabaseHealth(): Promise<{
   }
 }
 
-// Key Local Storage
+// Key Sesi Pengguna di Browser
 const AUTH_SESSION_KEY = "prd_architect_user_session_v2";
-const REGISTERED_USERS_KEY = "prd_architect_registered_users_v2";
-
-// Akun Bawaan Sistem
-export const SEED_ACCOUNTS = [
-  {
-    id: "usr-admin-01",
-    email: "admin@prdarchitect.com",
-    username: "admin",
-    password: "admin123",
-    name: "Jonathan (Admin)",
-    role: "admin" as const,
-    plan: "pro" as const,
-  },
-  {
-    id: "usr-member-01",
-    email: "member@prdarchitect.com",
-    username: "member",
-    password: "member123",
-    name: "User Member",
-    role: "member" as const,
-    plan: "free" as const,
-  },
-];
-
-function getStoredUsers() {
-  if (typeof window === "undefined") return SEED_ACCOUNTS;
-  try {
-    const raw = localStorage.getItem(REGISTERED_USERS_KEY);
-    if (!raw) {
-      localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(SEED_ACCOUNTS));
-      return SEED_ACCOUNTS;
-    }
-    return JSON.parse(raw);
-  } catch {
-    return SEED_ACCOUNTS;
-  }
-}
 
 export async function loginWithPassword(
   emailOrUsername: string,
@@ -144,73 +107,95 @@ export async function loginWithPassword(
     return { user: null, error: "Email/Username dan Password wajib diisi." };
   }
 
-  // 1. Cek jika Supabase Client aktif
-  if (supabaseInstance) {
-    try {
-      const emailToUse = cleanInput.includes("@")
-        ? cleanInput
-        : cleanInput === "admin"
-        ? "admin@prdarchitect.com"
-        : cleanInput === "member"
-        ? "member@prdarchitect.com"
-        : `${cleanInput}@prdarchitect.com`;
-
-      const { data, error } = await supabaseInstance.auth.signInWithPassword({
-        email: emailToUse,
-        password: cleanPass,
-      });
-
-      if (!error && data.user) {
-        const metadata = data.user.user_metadata || {};
-        const role = metadata.role || (emailToUse.includes("admin") ? "admin" : "member");
-        const plan = metadata.plan || (role === "admin" ? "pro" : "free");
-
-        const userProfile: UserProfile = {
-          id: data.user.id,
-          email: data.user.email || emailToUse,
-          name: metadata.name || (role === "admin" ? "Jonathan (Admin)" : "User Member"),
-          role,
-          plan,
-        };
-
-        if (typeof window !== "undefined") {
-          localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(userProfile));
-        }
-        return { user: userProfile };
-      }
-    } catch (sbErr) {
-      console.warn("Supabase Auth sign-in failed, fallback to local database:", sbErr);
-    }
-  }
-
-  // 2. Database Akun Terproteksi (Admin Pro & Member Free)
-  const allUsers = getStoredUsers();
-  const found = allUsers.find(
-    (u: typeof SEED_ACCOUNTS[0]) =>
-      (u.email.toLowerCase() === cleanInput || u.username.toLowerCase() === cleanInput) &&
-      u.password === cleanPass
-  );
-
-  if (!found) {
+  // Cek jika Supabase Client aktif
+  if (!supabaseInstance) {
     return {
       user: null,
-      error: "Username/Email atau Password salah. Silakan coba kembali.",
+      error: "Layanan database Supabase belum terkonfigurasi.",
     };
   }
 
-  const userProfile: UserProfile = {
-    id: found.id,
-    email: found.email,
-    name: found.name,
-    role: found.role,
-    plan: found.plan,
-  };
+  try {
+    let emailToUse = cleanInput;
 
-  if (typeof window !== "undefined") {
-    localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(userProfile));
+    // Jika pengguna login menggunakan username (tanpa @), cari emailnya di database profiles
+    if (!cleanInput.includes("@")) {
+      try {
+        const { data: profile } = await supabaseInstance
+          .from("profiles")
+          .select("email")
+          .eq("username", cleanInput)
+          .maybeSingle();
+
+        if (profile?.email) {
+          emailToUse = profile.email;
+        } else {
+          // Format email bawaan sistem jika username sesuai
+          emailToUse =
+            cleanInput === "admin"
+              ? "admin@prdarchitect.com"
+              : cleanInput === "member"
+              ? "member@prdarchitect.com"
+              : `${cleanInput}@prdarchitect.com`;
+        }
+      } catch {
+        emailToUse = `${cleanInput}@prdarchitect.com`;
+      }
+    }
+
+    // Autentikasi langsung ke database Supabase Auth
+    const { data, error } = await supabaseInstance.auth.signInWithPassword({
+      email: emailToUse,
+      password: cleanPass,
+    });
+
+    if (error || !data.user) {
+      return {
+        user: null,
+        error: "Username/Email atau Password salah. Silakan periksa kembali.",
+      };
+    }
+
+    // Ambil data profil dari database public.profiles
+    let dbProfile: any = null;
+    try {
+      const { data: p } = await supabaseInstance
+        .from("profiles")
+        .select("*")
+        .eq("id", data.user.id)
+        .maybeSingle();
+      dbProfile = p;
+    } catch {}
+
+    const metadata = data.user.user_metadata || {};
+    const role = dbProfile?.role || metadata.role || (emailToUse.includes("admin") ? "admin" : "member");
+    const plan = dbProfile?.plan || metadata.plan || (role === "admin" ? "pro" : "free");
+    const name = dbProfile?.name || metadata.name || (role === "admin" ? "Jonathan (Admin)" : "User Member");
+    const username = dbProfile?.username || metadata.username || cleanInput;
+
+    const userProfile: UserProfile = {
+      id: data.user.id,
+      email: data.user.email || emailToUse,
+      name,
+      username,
+      phone: dbProfile?.phone || metadata.phone,
+      organization: dbProfile?.organization || metadata.organization,
+      role,
+      plan,
+    };
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(userProfile));
+    }
+
+    return { user: userProfile };
+  } catch (sbErr: any) {
+    console.warn("Supabase Auth sign-in failed:", sbErr);
+    return {
+      user: null,
+      error: sbErr?.message || "Gagal menghubungi database otentikasi. Silakan periksa koneksi internet Anda.",
+    };
   }
-
-  return { user: userProfile };
 }
 
 export interface RegisterNewUserData {
@@ -237,104 +222,69 @@ export async function registerNewUser(
     return { user: null, error: "Nama, email, dan password wajib diisi." };
   }
 
-  // 1. Coba daftar via Supabase jika terhubung
-  if (supabaseInstance) {
-    try {
-      const { data, error } = await supabaseInstance.auth.signUp({
-        email: cleanEmail,
-        password: cleanPass,
-        options: {
-          data: {
-            name: cleanName,
-            username: cleanUsername,
-            phone: input.phone,
-            organization: input.organization,
-            role,
-            plan,
-          },
-        },
-      });
+  // Autentikasi pendaftaran ke database Supabase
+  if (!supabaseInstance) {
+    return {
+      user: null,
+      error: "Layanan database Supabase belum terkonfigurasi.",
+    };
+  }
 
-      if (!error && data.user) {
-        // Simpan ke tabel public.profiles
-        try {
-          await supabaseInstance.from("profiles").upsert({
-            id: data.user.id,
-            name: cleanName,
-            username: cleanUsername,
-            email: cleanEmail,
-            phone: input.phone || null,
-            organization: input.organization || null,
-            role,
-            plan,
-          });
-        } catch {
-          // Abaikan jika trigger handle_new_user sudah handle
-        }
-
-        const userProfile: UserProfile = {
-          id: data.user.id,
-          email: cleanEmail,
+  try {
+    const { data, error } = await supabaseInstance.auth.signUp({
+      email: cleanEmail,
+      password: cleanPass,
+      options: {
+        data: {
           name: cleanName,
           username: cleanUsername,
           phone: input.phone,
           organization: input.organization,
           role,
           plan,
-        };
+        },
+      },
+    });
 
-        if (typeof window !== "undefined") {
-          localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(userProfile));
-        }
-        return { user: userProfile };
-      } else if (error) {
-        return { user: null, error: error.message };
-      }
-    } catch (sbErr) {
-      console.warn("Supabase Auth sign-up error, fallback to local database:", sbErr);
+    if (error || !data.user) {
+      return { user: null, error: error?.message || "Pendaftaran gagal pada database Supabase." };
     }
+
+    // Simpan ke tabel public.profiles di database
+    try {
+      await supabaseInstance.from("profiles").upsert({
+        id: data.user.id,
+        name: cleanName,
+        username: cleanUsername,
+        email: cleanEmail,
+        phone: input.phone || null,
+        organization: input.organization || null,
+        role,
+        plan,
+      });
+    } catch {
+      // Abaikan jika trigger handle_new_user sudah mengeksekusi
+    }
+
+    const userProfile: UserProfile = {
+      id: data.user.id,
+      email: cleanEmail,
+      name: cleanName,
+      username: cleanUsername,
+      phone: input.phone,
+      organization: input.organization,
+      role,
+      plan,
+    };
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(userProfile));
+    }
+    return { user: userProfile };
+  } catch (sbErr: any) {
+    console.warn("Supabase Auth sign-up error:", sbErr);
+    return { user: null, error: sbErr?.message || "Terjadi kesalahan saat mendaftarkan akun ke database." };
   }
-
-  // 2. Fallback ke database akun lokal
-  const allUsers = getStoredUsers();
-  if (allUsers.some((u: typeof SEED_ACCOUNTS[0]) => u.email.toLowerCase() === cleanEmail)) {
-    return { user: null, error: "Email ini sudah terdaftar. Silakan gunakan email lain atau login." };
-  }
-
-  const newId = `usr-${Date.now()}`;
-  const newUser = {
-    id: newId,
-    email: cleanEmail,
-    username: cleanUsername,
-    password: cleanPass,
-    name: cleanName,
-    phone: input.phone,
-    organization: input.organization,
-    role,
-    plan,
-  };
-
-  const updated = [...allUsers, newUser];
-  if (typeof window !== "undefined") {
-    localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(updated));
-  }
-
-  const userProfile: UserProfile = {
-    id: newId,
-    email: cleanEmail,
-    name: cleanName,
-    username: cleanUsername,
-    phone: input.phone,
-    organization: input.organization,
-    role,
-    plan,
-  };
-
-  if (typeof window !== "undefined") {
-    localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(userProfile));
-  }
-
-  return { user: userProfile };
 }
 
 export function getCurrentUserSession(): UserProfile | null {
