@@ -5,7 +5,7 @@ import Sidebar from "./Sidebar";
 import DashboardView from "./DashboardView";
 import PRDViewer from "./PRDViewer";
 import AIEngineModal from "./AIEngineModal";
-import AIChatbotAssistant, { ExtractedPRDData } from "./AIChatbotAssistant";
+import AIChatbotAssistant, { ExtractedPRDData, ChatMode } from "./AIChatbotAssistant";
 import AuthGate from "./AuthGate";
 import {
   SavedPRDProject,
@@ -21,6 +21,7 @@ import {
   loadSavedProjects,
   saveProject,
   deleteProject,
+  syncProjectsFromSupabase,
   loadActiveEngine,
   saveActiveEngine,
   SAMPLE_MEDIBRIDGE_PRD,
@@ -99,6 +100,7 @@ export default function PRDStudio() {
   // Navigation & View State
   const [currentView, setCurrentView] = useState<"dashboard" | "generator">("dashboard");
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
+  const [chatMode, setChatMode] = useState<ChatMode>("quick");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isEngineModalOpen, setIsEngineModalOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
@@ -157,6 +159,13 @@ export default function PRDStudio() {
       const projects = loadSavedProjects(sessionUser.id);
       setSavedProjects(projects);
       resetToDefaultState();
+
+      // Sync cloud projects dari Supabase di background
+      syncProjectsFromSupabase(sessionUser.id).then((cloudProjects) => {
+        if (cloudProjects && cloudProjects.length > 0) {
+          setSavedProjects(cloudProjects);
+        }
+      });
     }
   }, []);
 
@@ -172,6 +181,13 @@ export default function PRDStudio() {
     setSavedProjects(projects);
     resetToDefaultState();
     showToast(`Selamat datang, ${user.name}! (${user.plan === "pro" ? "👑 Pro Tier" : "⚡ Free Tier"})`);
+
+    // Sync cloud projects dari Supabase di background
+    syncProjectsFromSupabase(user.id).then((cloudProjects) => {
+      if (cloudProjects && cloudProjects.length > 0) {
+        setSavedProjects(cloudProjects);
+      }
+    });
   }
 
   function handleLogoutRequest() {
@@ -1017,6 +1033,8 @@ export default function PRDStudio() {
               activeEngine={activeEngine}
               onApplyToForm={handleApplyFromChat}
               onClose={() => setIsChatbotOpen(false)}
+              chatMode={chatMode}
+              onChatModeChange={setChatMode}
             />
           </aside>
         )}

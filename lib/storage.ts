@@ -1,4 +1,5 @@
 import { SavedPRDProject, AIEngineOption } from "./types";
+import { getSupabase } from "./supabase";
 
 const STORAGE_KEY_PRD_LIST = "prd_architect_saved_projects_v2";
 const STORAGE_KEY_AI_ENGINE = "prd_architect_active_engine_v2";
@@ -319,6 +320,48 @@ export function saveProject(project: SavedPRDProject, userId?: string): SavedPRD
 
     localStorage.setItem(STORAGE_KEY_PRD_LIST, JSON.stringify(updatedAll));
 
+    // Sync cloud asinkron ke Supabase prd_projects
+    try {
+      const sb = getSupabase();
+      if (sb) {
+        let targetUuid: string | null = null;
+        if (userId === "usr-admin-01" || userId === "5288bcdc-e821-4276-bcef-9413d1d4261b") {
+          targetUuid = "5288bcdc-e821-4276-bcef-9413d1d4261b";
+        } else if (userId === "usr-member-01" || userId === "f5e174aa-3d50-4446-8890-b63420cb06e0") {
+          targetUuid = "f5e174aa-3d50-4446-8890-b63420cb06e0";
+        } else if (userId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
+          targetUuid = userId;
+        }
+
+        if (targetUuid) {
+          (async () => {
+            try {
+              const { error } = await sb.from("prd_projects").upsert({
+                id: projectWithUser.id,
+                user_id: targetUuid,
+                nama: projectWithUser.nama,
+                ide: projectWithUser.ide,
+                category: projectWithUser.category || "general",
+                target: projectWithUser.target || "",
+                stack: projectWithUser.stack || "",
+                timeline: projectWithUser.timeline || "",
+                features: projectWithUser.features || [],
+                markdown: projectWithUser.markdown,
+                model: projectWithUser.model || "gemini-3.6-flash",
+                source: projectWithUser.source || "gemini",
+                updated_at: new Date().toISOString(),
+              });
+              if (error) console.warn("Supabase project sync warning:", error.message);
+            } catch {
+              // Abaikan jika network error
+            }
+          })();
+        }
+      }
+    } catch {
+      // Abaikan jika offline / storage fallback
+    }
+
     // Kembalikan hanya project untuk user yang sedang aktif
     if (userId) {
       return updatedAll.filter((p) => p.userId === userId);
@@ -339,6 +382,22 @@ export function deleteProject(id: string, userId?: string): SavedPRDProject[] {
     const filtered = allProjects.filter((p) => p.id !== id);
     localStorage.setItem(STORAGE_KEY_PRD_LIST, JSON.stringify(filtered));
 
+    // Sync hapus ke Supabase jika aktif
+    try {
+      const sb = getSupabase();
+      if (sb) {
+        (async () => {
+          try {
+            await sb.from("prd_projects").delete().eq("id", id);
+          } catch {
+            // Abaikan jika offline
+          }
+        })();
+      }
+    } catch {
+      // Abaikan jika offline
+    }
+
     if (userId) {
       return filtered.filter((p) => p.userId === userId);
     }
@@ -347,6 +406,62 @@ export function deleteProject(id: string, userId?: string): SavedPRDProject[] {
     console.error("Gagal menghapus project dari localStorage:", err);
     return [];
   }
+}
+
+export async function syncProjectsFromSupabase(userId?: string): Promise<SavedPRDProject[] | null> {
+  if (typeof window === "undefined") return null;
+  const sb = getSupabase();
+  if (!sb) return null;
+
+  let targetUuid: string | null = null;
+  if (userId === "usr-admin-01" || userId === "5288bcdc-e821-4276-bcef-9413d1d4261b") {
+    targetUuid = "5288bcdc-e821-4276-bcef-9413d1d4261b";
+  } else if (userId === "usr-member-01" || userId === "f5e174aa-3d50-4446-8890-b63420cb06e0") {
+    targetUuid = "f5e174aa-3d50-4446-8890-b63420cb06e0";
+  } else if (userId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
+    targetUuid = userId;
+  }
+
+  if (!targetUuid) return null;
+
+  try {
+    const { data, error } = await sb
+      .from("prd_projects")
+      .select("*")
+      .eq("user_id", targetUuid)
+      .order("created_at", { ascending: false });
+
+    if (!error && data && data.length > 0) {
+      const cloudProjects: SavedPRDProject[] = data.map((row) => ({
+        id: row.id,
+        userId: row.user_id,
+        nama: row.nama,
+        ide: row.ide,
+        category: row.category,
+        target: row.target,
+        stack: row.stack,
+        timeline: row.timeline,
+        features: Array.isArray(row.features) ? row.features : [],
+        markdown: row.markdown,
+        model: row.model,
+        source: row.source as any,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      }));
+
+      const raw = localStorage.getItem(STORAGE_KEY_PRD_LIST);
+      const localList: SavedPRDProject[] = raw ? JSON.parse(raw) : DEFAULT_SEED_PROJECTS;
+      const map = new Map<string, SavedPRDProject>();
+      localList.forEach((p) => map.set(p.id, p));
+      cloudProjects.forEach((p) => map.set(p.id, p));
+      const merged = Array.from(map.values());
+      localStorage.setItem(STORAGE_KEY_PRD_LIST, JSON.stringify(merged));
+      return merged.filter((p) => p.userId === targetUuid || p.userId === userId);
+    }
+  } catch (err) {
+    console.warn("Sync from Supabase failed:", err);
+  }
+  return null;
 }
 
 export function loadActiveEngine(): AIEngineOption {

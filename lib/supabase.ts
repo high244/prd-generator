@@ -1,10 +1,16 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { UserProfile } from "./types";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseUrl =
+  process.env.NEXT_PUBLIC_SUPABASE_URL ||
+  process.env.SUPABASE_URL ||
+  "";
+
 const supabaseAnonKey =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_KEY ||
+  process.env.SUPABASE_ANON_KEY ||
   "";
 
 let supabaseInstance: SupabaseClient | null = null;
@@ -23,6 +29,68 @@ export function getSupabase(): SupabaseClient | null {
 
 export function isSupabaseConfigured(): boolean {
   return Boolean(supabaseInstance);
+}
+
+export function getSupabaseConfigInfo(): {
+  isConfigured: boolean;
+  hasUrl: boolean;
+  hasAnonKey: boolean;
+  urlHost?: string;
+} {
+  let urlHost: string | undefined;
+  if (supabaseUrl) {
+    try {
+      urlHost = new URL(supabaseUrl).hostname;
+    } catch {
+      urlHost = supabaseUrl.replace(/https?:\/\//, "").split("/")[0];
+    }
+  }
+  return {
+    isConfigured: Boolean(supabaseInstance),
+    hasUrl: Boolean(supabaseUrl),
+    hasAnonKey: Boolean(supabaseAnonKey),
+    urlHost,
+  };
+}
+
+export async function checkSupabaseHealth(): Promise<{
+  configured: boolean;
+  connected: boolean;
+  urlHost?: string;
+  error?: string;
+}> {
+  const info = getSupabaseConfigInfo();
+  if (!supabaseInstance) {
+    return {
+      configured: false,
+      connected: false,
+      error: "Variabel NEXT_PUBLIC_SUPABASE_URL atau NEXT_PUBLIC_SUPABASE_ANON_KEY belum diset di Vercel.",
+    };
+  }
+
+  try {
+    const { error } = await supabaseInstance.from("profiles").select("count").limit(1);
+    if (error && error.code !== "PGRST116") {
+      return {
+        configured: true,
+        connected: false,
+        urlHost: info.urlHost,
+        error: error.message,
+      };
+    }
+    return {
+      configured: true,
+      connected: true,
+      urlHost: info.urlHost,
+    };
+  } catch (err: any) {
+    return {
+      configured: true,
+      connected: false,
+      urlHost: info.urlHost,
+      error: err?.message || "Koneksi ke Supabase gagal",
+    };
+  }
 }
 
 // Key Local Storage
@@ -188,9 +256,9 @@ export async function registerNewUser(
       });
 
       if (!error && data.user) {
-        // Simpan ke tabel public.user_profiles
+        // Simpan ke tabel public.profiles
         try {
-          await supabaseInstance.from("user_profiles").upsert({
+          await supabaseInstance.from("profiles").upsert({
             id: data.user.id,
             name: cleanName,
             username: cleanUsername,
@@ -201,7 +269,7 @@ export async function registerNewUser(
             plan,
           });
         } catch {
-          // Abaikan jika tabel belum di-create manual
+          // Abaikan jika trigger handle_new_user sudah handle
         }
 
         const userProfile: UserProfile = {
