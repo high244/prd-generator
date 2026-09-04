@@ -92,7 +92,7 @@ export default function PRDGenerator() {
   const [errorMsg, setErrorMsg] = useState("");
   const [copiedPrd, setCopiedPrd] = useState(false);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
-  const [aiSource, setAiSource] = useState<"claude" | "fallback" | "gemini" | null>(null);
+  const [aiSource, setAiSource] = useState<"claude" | "fallback" | "gemini" | "openrouter" | null>(null);
   const [aiModel, setAiModel] = useState<string>("");
   const [priorityFilter, setPriorityFilter] = useState<"ALL" | "P0" | "P1" | "P2">("ALL");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -811,6 +811,8 @@ Mohon buatkan implementasi tahap pertama dari project ini berdasarkan PRD di ata
                       ? `Google Gemini (${aiModel || "Flash"})`
                       : aiSource === "claude"
                       ? "Claude 3.5 Sonnet (Live API)"
+                      : aiSource === "openrouter"
+                      ? `OpenRouter (${aiModel || "AI"})`
                       : "Smart Architecture Engine"}
                   </span>
                 </div>

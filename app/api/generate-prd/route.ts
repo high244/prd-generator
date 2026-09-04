@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { buildPrompt, generateFallbackPRD, type PRDInput } from "@/lib/prompt";
 import { generateWithGemini } from "@/lib/gemini";
+import { generateWithOpenRouter } from "@/lib/openrouter";
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +56,7 @@ export async function POST(req: NextRequest) {
 
   const geminiKey = process.env.GEMINI_API_KEY;
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  const openrouterKey = process.env.OPENROUTER_API_KEY;
 
   const { system, user } = buildPrompt({
     nama: nama.trim(),
@@ -66,8 +68,36 @@ export async function POST(req: NextRequest) {
     businessModel: body.businessModel,
   });
 
-  // 1. Prioritaskan Google Gemini API jika key tersedia (dan user tidak memilih Claude saja)
-  if (engine !== "claude-3-5-sonnet" && geminiKey && geminiKey.trim().length > 10) {
+  const isOpenRouterRequested =
+    Boolean(engine?.startsWith("openrouter") || preferredModel?.startsWith("openrouter"));
+
+  // 1. Eksekusi OpenRouter jika diminta secara eksplisit atau jika OpenRouter adalah satu-satunya key yang diset
+  if (isOpenRouterRequested || (!geminiKey && !anthropicKey && openrouterKey)) {
+    try {
+      const targetModel = preferredModel || engine || "openrouter-claude-3.5-sonnet";
+      const openrouterRes = await generateWithOpenRouter({
+        systemPrompt: system,
+        userPrompt: user,
+        preferredModel: targetModel,
+      });
+
+      return NextResponse.json({
+        markdown: openrouterRes.text,
+        source: "openrouter",
+        model: openrouterRes.model,
+      });
+    } catch (openrouterErr) {
+      console.warn("OpenRouter API call failed, attempting fallback:", openrouterErr);
+    }
+  }
+
+  // 2. Google Gemini API jika key tersedia (dan user tidak memilih Claude/OpenRouter saja)
+  if (
+    engine !== "claude-3-5-sonnet" &&
+    !isOpenRouterRequested &&
+    geminiKey &&
+    geminiKey.trim().length > 10
+  ) {
     try {
       const targetModel = preferredModel || "gemini-3.6-flash";
       const geminiRes = await generateWithGemini({
@@ -86,7 +116,26 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 2. Alternatif: Anthropic Claude API
+  // 3. Jika Gemini gagal atau tidak ada key, coba OpenRouter jika key tersedia dan belum dicoba
+  if (!isOpenRouterRequested && openrouterKey && openrouterKey.trim().length > 5) {
+    try {
+      const openrouterRes = await generateWithOpenRouter({
+        systemPrompt: system,
+        userPrompt: user,
+        preferredModel: "openrouter-claude-3.5-sonnet",
+      });
+
+      return NextResponse.json({
+        markdown: openrouterRes.text,
+        source: "openrouter",
+        model: openrouterRes.model,
+      });
+    } catch (orErr) {
+      console.warn("OpenRouter fallback failed:", orErr);
+    }
+  }
+
+  // 4. Alternatif: Anthropic Claude API (Direct)
   const isAnthropicKeyValid =
     Boolean(anthropicKey) &&
     anthropicKey!.startsWith("sk-ant-") &&

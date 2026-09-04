@@ -44,6 +44,13 @@ const ENV_VARIABLES = [
     source: "console.anthropic.com -> API Keys",
     type: "ai",
   },
+  {
+    key: "OPENROUTER_API_KEY",
+    placeholder: "Ambil dari .env.local lokal Anda (OpenRouter API key)",
+    description: "OpenRouter API key untuk Claude 3.5 Sonnet, DeepSeek R1, GPT-4o, & Llama 3.3",
+    source: "openrouter.ai/keys -> Create Key",
+    type: "ai",
+  },
 ];
 
 const RAW_ENV_BLOCK = `# Salin langsung isi file .env.local dari komputer lokal Anda
@@ -54,6 +61,7 @@ NEXT_PUBLIC_SUPABASE_URL=https://zsvsqekmcdrvyctqqmuo.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<isi_dari_file_env_local_anda>
 SUPABASE_SERVICE_ROLE_KEY=<isi_dari_file_env_local_anda>
 GEMINI_API_KEY=<isi_dari_file_env_local_anda>
+OPENROUTER_API_KEY=<isi_dari_file_env_local_anda>
 ANTHROPIC_API_KEY=<isi_dari_file_env_local_anda>`;
 
 export default function VercelConnectionModal({

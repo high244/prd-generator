@@ -18,6 +18,7 @@ export async function GET() {
 
   const geminiKey = process.env.GEMINI_API_KEY || "";
   const anthropicKey = process.env.ANTHROPIC_API_KEY || "";
+  const openrouterKey = process.env.OPENROUTER_API_KEY || "";
 
   let supabaseConnected = false;
   let supabaseError: string | null = null;
@@ -57,6 +58,7 @@ export async function GET() {
     ai: {
       geminiConfigured: Boolean(geminiKey),
       anthropicConfigured: Boolean(anthropicKey),
+      openrouterConfigured: Boolean(openrouterKey),
     },
   });
 }

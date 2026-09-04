@@ -10,7 +10,7 @@ interface PRDViewerProps {
   ide: string;
   stack: string;
   timeline?: string;
-  aiSource: "gemini" | "claude" | "fallback" | null;
+  aiSource: "gemini" | "claude" | "openrouter" | "fallback" | null;
   aiModel?: string;
   onSaveToHistory: () => void;
   isSaved?: boolean;
@@ -401,6 +401,8 @@ Mohon buatkan implementasi tahap pertama dari project ini berdasarkan PRD.`;
                 ? `Gemini (${aiModel || "Flash"})`
                 : aiSource === "claude"
                 ? "Claude 3.5 Sonnet"
+                : aiSource === "openrouter"
+                ? `OpenRouter (${aiModel ? aiModel.split("/").pop() : "AI"})`
                 : "Smart Architecture"}
             </span>
           </div>

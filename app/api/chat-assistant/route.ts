@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateWithGemini } from "@/lib/gemini";
+import { generateWithOpenRouter } from "@/lib/openrouter";
 import type { FeatureItem } from "@/lib/prompt";
 
 export const dynamic = "force-dynamic";
@@ -163,13 +164,46 @@ ${conversationHistory}
 Berdasarkan obrolan di atas, berikan tanggapan ramah dan bersahabat, lalu sertakan formulir PRD siap pakai setelah delimiter ---PRD_DATA_JSON---.`;
 
   try {
-    const geminiRes = await generateWithGemini({
-      systemPrompt,
-      userPrompt,
-      preferredModel: preferredModel || "gemini-3.6-flash",
-    });
+    let fullText = "";
+    let usedModel = preferredModel || "gemini-3.6-flash";
+    let usedSource: "gemini" | "openrouter" = "gemini";
 
-    const fullText = geminiRes.text;
+    const isOpenRouterRequested = Boolean(preferredModel?.startsWith("openrouter"));
+    const geminiKey = process.env.GEMINI_API_KEY;
+    const openrouterKey = process.env.OPENROUTER_API_KEY;
+
+    // 1. Prioritaskan OpenRouter jika dipilih atau jika Gemini key tidak ada
+    if (isOpenRouterRequested || (!geminiKey && openrouterKey)) {
+      try {
+        const openrouterRes = await generateWithOpenRouter({
+          systemPrompt,
+          userPrompt,
+          preferredModel: preferredModel || "openrouter-claude-3.5-sonnet",
+          temperature: mode === "discovery" ? 0.7 : 0.4,
+        });
+        fullText = openrouterRes.text;
+        usedModel = openrouterRes.model;
+        usedSource = "openrouter";
+      } catch (orErr) {
+        console.warn("OpenRouter chat failed, attempting Gemini fallback:", orErr);
+      }
+    }
+
+    // 2. Google Gemini jika OpenRouter belum berhasil atau tidak diminta
+    if (!fullText) {
+      const targetGeminiModel = preferredModel?.startsWith("gemini")
+        ? preferredModel
+        : "gemini-3.6-flash";
+      const geminiRes = await generateWithGemini({
+        systemPrompt,
+        userPrompt,
+        preferredModel: targetGeminiModel,
+      });
+      fullText = geminiRes.text;
+      usedModel = geminiRes.model;
+      usedSource = "gemini";
+    }
+
     const parts = fullText.split("---PRD_DATA_JSON---");
 
     let reply = parts[0]?.trim() || "Baik, saya sudah memahami ide Anda dan merangkumnya.";
@@ -238,8 +272,8 @@ Berdasarkan obrolan di atas, berikan tanggapan ramah dan bersahabat, lalu sertak
     return NextResponse.json({
       reply,
       extracted,
-      model: geminiRes.model,
-      source: "gemini",
+      model: usedModel,
+      source: usedSource,
       mode,
       discoveryDimension,
     });

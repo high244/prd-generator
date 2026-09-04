@@ -1,4 +1,4 @@
-import { SavedPRDProject, AIEngineOption } from "./types";
+import { SavedPRDProject, AIEngineOption, AI_ENGINE_OPTIONS } from "./types";
 import { getSupabase } from "./supabase";
 
 const STORAGE_KEY_PRD_LIST = "prd_architect_saved_projects_v2";
@@ -515,7 +515,7 @@ export function loadActiveEngine(): AIEngineOption {
   if (typeof window === "undefined") return "gemini-3.6-flash";
   try {
     const val = localStorage.getItem(STORAGE_KEY_AI_ENGINE);
-    if (val && ["gemini-3.6-flash", "gemini-3.1-flash-lite", "gemini-3.8-flash", "claude-3-5-sonnet", "fallback"].includes(val)) {
+    if (val && AI_ENGINE_OPTIONS.some((e) => e.id === val)) {
       return val as AIEngineOption;
     }
     return "gemini-3.6-flash";

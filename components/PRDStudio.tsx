@@ -131,7 +131,7 @@ export default function PRDStudio() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [markdown, setMarkdown] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
-  const [aiSource, setAiSource] = useState<"claude" | "fallback" | "gemini" | null>(null);
+  const [aiSource, setAiSource] = useState<"claude" | "fallback" | "gemini" | "openrouter" | null>(null);
   const [aiModel, setAiModel] = useState<string>("");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
