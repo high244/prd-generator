@@ -52,8 +52,8 @@ export async function generateWithGemini(
           },
         ],
         generationConfig: {
-          temperature: options.temperature ?? 0.7,
-          maxOutputTokens: options.maxOutputTokens ?? 4000,
+          temperature: options.temperature ?? 0.4,
+          maxOutputTokens: options.maxOutputTokens ?? 8192,
         },
       };
 

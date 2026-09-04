@@ -4,8 +4,8 @@ import { useState } from "react";
 import { SavedPRDProject, AIEngineOption, UserProfile } from "@/lib/types";
 
 interface SidebarProps {
-  currentView: "dashboard" | "generator";
-  onSelectView: (view: "dashboard" | "generator") => void;
+  currentView?: "dashboard" | "generator";
+  onExitToDashboard?: () => void;
   savedProjects: SavedPRDProject[];
   activeProjectId: string | null;
   onSelectProject: (project: SavedPRDProject) => void;
@@ -21,7 +21,7 @@ interface SidebarProps {
 
 export default function Sidebar({
   currentView,
-  onSelectView,
+  onExitToDashboard,
   savedProjects,
   activeProjectId,
   onSelectProject,
@@ -110,44 +110,25 @@ export default function Sidebar({
         </button>
       </div>
 
-      {/* Main Navigation links */}
-      <div className="px-3 pb-2 space-y-1">
-        <button
-          type="button"
-          onClick={() => onSelectView("dashboard")}
-          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-            currentView === "dashboard"
-              ? "bg-brand-500/15 text-brand-300 border border-brand-500/30"
-              : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/60"
-          } ${isCollapsed ? "justify-center px-0" : ""}`}
-          title="Dashboard Depan"
-        >
-          <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-            <rect x="3" y="3" width="7" height="7" />
-            <rect x="14" y="3" width="7" height="7" />
-            <rect x="14" y="14" width="7" height="7" />
-            <rect x="3" y="14" width="7" height="7" />
-          </svg>
-          {!isCollapsed && <span>Dashboard Depan</span>}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onSelectView("generator")}
-          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-            currentView === "generator"
-              ? "bg-brand-500/15 text-brand-300 border border-brand-500/30"
-              : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/60"
-          } ${isCollapsed ? "justify-center px-0" : ""}`}
-          title="Editor & Generator PRD"
-        >
-          <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-            <path d="M12 20h9" />
-            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-          </svg>
-          {!isCollapsed && <span>Workspace PRD</span>}
-        </button>
-      </div>
+      {/* Exit to Dashboard button (only visible when in generator/workspace view) */}
+      {currentView === "generator" && onExitToDashboard && (
+        <div className="px-3 pb-2">
+          <button
+            type="button"
+            onClick={onExitToDashboard}
+            className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all text-slate-300 hover:text-white bg-slate-900/80 hover:bg-slate-800 border border-white/10 hover:border-brand-500/30 ${
+              isCollapsed ? "justify-center px-0" : ""
+            }`}
+            title="Keluar ke Dashboard (Simpan Draft)"
+          >
+            <svg className="w-4 h-4 shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path d="M19 12H5" />
+              <polyline points="12 19 5 12 12 5" />
+            </svg>
+            {!isCollapsed && <span>Keluar ke Dashboard</span>}
+          </button>
+        </div>
+      )}
 
       {/* Search Bar (if expanded) */}
       {!isCollapsed && (
@@ -214,10 +195,18 @@ export default function Sidebar({
                     <div className="font-medium text-xs truncate leading-snug">
                       {project.nama}
                     </div>
-                    <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-400">
+                    <div className="flex items-center gap-1.5 mt-1 text-[10px] text-slate-400">
                       <span className="capitalize">{project.category || "General"}</span>
                       <span>•</span>
                       <span>{formatRelativeDate(project.createdAt)}</span>
+                      {!project.markdown && (
+                        <>
+                          <span>•</span>
+                          <span className="text-amber-400 font-semibold px-1 rounded bg-amber-500/10 border border-amber-500/20">
+                            Draft
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}

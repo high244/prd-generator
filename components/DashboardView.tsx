@@ -314,68 +314,86 @@ export default function DashboardView({
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredProjects.map((project) => (
-              <div
-                key={project.id}
-                className="glass-panel p-5 rounded-2xl border border-white/10 hover:border-brand-500/40 transition-all flex flex-col justify-between group"
-              >
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md bg-brand-500/10 text-brand-300 border border-brand-500/20">
-                      {project.category || "General"}
-                    </span>
-                    <span className="text-[10px] text-slate-400">
-                      {formatDate(project.createdAt)}
-                    </span>
-                  </div>
-
-                  <div>
-                    <h3 className="font-display font-semibold text-base text-white group-hover:text-brand-300 transition-colors line-clamp-1">
-                      {project.nama}
-                    </h3>
-                    <p className="text-xs text-slate-400 line-clamp-2 mt-1.5 leading-relaxed">
-                      {project.ide}
-                    </p>
-                  </div>
-
-                  <div className="pt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
-                    <span className="px-2 py-0.5 rounded bg-white/5 border border-white/5">
-                      💻 {project.stack ? project.stack.split("+")[0].trim() : "Next.js"}
-                    </span>
-                    {project.features && (
-                      <span className="px-2 py-0.5 rounded bg-white/5 border border-white/5">
-                        ⚡ {project.features.length} Fitur
+            {filteredProjects.map((project) => {
+              const isDraft = !project.markdown;
+              return (
+                <div
+                  key={project.id}
+                  className="glass-panel p-5 rounded-2xl border border-white/10 hover:border-brand-500/40 transition-all flex flex-col justify-between group"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md bg-brand-500/10 text-brand-300 border border-brand-500/20">
+                          {project.category || "General"}
+                        </span>
+                        {isDraft ? (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                            Draft
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                            PRD Siap
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-slate-400">
+                        {formatDate(project.createdAt)}
                       </span>
-                    )}
+                    </div>
+
+                    <div>
+                      <h3 className="font-display font-semibold text-base text-white group-hover:text-brand-300 transition-colors line-clamp-1">
+                        {project.nama}
+                      </h3>
+                      <p className="text-xs text-slate-400 line-clamp-2 mt-1.5 leading-relaxed">
+                        {project.ide || "Belum ada deskripsi ide konsep."}
+                      </p>
+                    </div>
+
+                    <div className="pt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
+                      <span className="px-2 py-0.5 rounded bg-white/5 border border-white/5">
+                        💻 {project.stack ? project.stack.split("+")[0].trim() : "Next.js"}
+                      </span>
+                      {project.features && project.features.length > 0 && (
+                        <span className="px-2 py-0.5 rounded bg-white/5 border border-white/5">
+                          ⚡ {project.features.length} Fitur
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="pt-5 border-t border-white/10 mt-4 flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onOpenProject(project)}
+                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium border transition-all text-center flex items-center justify-center gap-1.5 ${
+                        isDraft
+                          ? "bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/30"
+                          : "bg-brand-500/10 hover:bg-brand-500/20 text-brand-300 border-brand-500/30"
+                      }`}
+                    >
+                      <span>{isDraft ? "Lanjutkan Draft" : "Buka PRD"}</span>
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={(e) => onDeleteProject(project.id, e)}
+                      className="p-2 rounded-lg bg-slate-800/80 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 border border-white/5 transition-colors"
+                      title="Hapus PRD"
+                    >
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
-
-                <div className="pt-5 border-t border-white/10 mt-4 flex items-center justify-between gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onOpenProject(project)}
-                    className="flex-1 py-2 px-3 rounded-lg bg-brand-500/10 hover:bg-brand-500/20 text-brand-300 text-xs font-medium border border-brand-500/30 transition-all text-center flex items-center justify-center gap-1.5"
-                  >
-                    <span>Buka PRD</span>
-                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                      <polyline points="9 18 15 12 9 6" />
-                    </svg>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={(e) => onDeleteProject(project.id, e)}
-                    className="p-2 rounded-lg bg-slate-800/80 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 border border-white/5 transition-colors"
-                    title="Hapus PRD"
-                  >
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                      <polyline points="3 6 5 6 21 6" />
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

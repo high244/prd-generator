@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
+import { evaluatePRDQuality, type PRDAuditResult } from "@/lib/evaluator";
 
 interface PRDViewerProps {
   markdown: string;
@@ -35,8 +36,8 @@ export default function PRDViewer({
   isSaved = false,
   onShowToast,
 }: PRDViewerProps) {
-  // View mode: 'tabs' (Modular) | 'accordion' (Collapsible) | 'full' (Traditional) | 'prompt' | 'raw'
-  const [viewMode, setViewMode] = useState<"tabs" | "accordion" | "full" | "prompt" | "raw">("tabs");
+  // View mode: 'tabs' (Modular) | 'accordion' (Collapsible) | 'full' (Traditional) | 'audit' (Quality Audit) | 'prompt' | 'raw'
+  const [viewMode, setViewMode] = useState<"tabs" | "accordion" | "full" | "audit" | "prompt" | "raw">("tabs");
   const [activeTabGroup, setActiveTabGroup] = useState<number>(0);
   const [expandedSections, setExpandedSections] = useState<Record<number, boolean>>({
     1: true,
@@ -88,31 +89,40 @@ export default function PRDViewer({
     return result;
   }, [markdown]);
 
-  // Tab Groups for Modular Mode
+  // Automated Quality & Accuracy Audit Engine (ScalerShare v4.1 Standard)
+  const auditResult = useMemo<PRDAuditResult>(() => evaluatePRDQuality(markdown), [markdown]);
+
+  // Tab Groups for Modular Mode (12 Chapters)
   const tabGroups = [
     {
       id: 0,
-      name: "📌 1. Visi & Persona",
-      desc: "Visi produk, problem statement, dan profil persona pengguna",
-      sectionNumbers: [1, 2],
+      name: "📌 1. Visi, Arsitektur & RBAC",
+      desc: "Visi produk, diagram arsitektur sistem, & matriks hak akses RBAC",
+      sectionNumbers: [1, 2, 3],
     },
     {
       id: 1,
-      name: "⚡ 2. Fitur & MoSCoW",
-      desc: "Tabel fitur prioritas P0 (Must), P1 (Should), P2 (Nice-to-Have)",
-      sectionNumbers: [3],
+      name: "🗄️ 2. Database DDL & API",
+      desc: "Skema PostgreSQL DDL executable & spesifikasi endpoint RESTful",
+      sectionNumbers: [4, 6],
     },
     {
       id: 2,
-      name: "🗄️ 3. Database & Teknis",
-      desc: "Sitemap alur halaman, skema database SQL DDL, stack, & NFR",
-      sectionNumbers: [4, 5, 6, 7],
+      name: "⚡ 3. Fitur MoSCoW & Kriteria",
+      desc: "Tabel fitur prioritas P0, P1, P2 dan alur penanganan kondisi batas",
+      sectionNumbers: [5],
     },
     {
       id: 3,
-      name: "🚀 4. Roadmap & AI Agent",
-      desc: "Jadwal peluncuran MVP, indikator KPI, & prompt coding agent",
-      sectionNumbers: [8, 9, 10],
+      name: "🛡️ 4. Keamanan, QPS & Resiliensi",
+      desc: "5-layer defense, estimasi formula QPS, & graceful degradation L0-L4",
+      sectionNumbers: [7, 8, 9],
+    },
+    {
+      id: 4,
+      name: "⚠️ 5. Redlines, Testing & AI Agent",
+      desc: "Development redlines, checklist peluncuran, & prompt Cursor/Claude",
+      sectionNumbers: [10, 11, 12],
     },
   ];
 
@@ -281,6 +291,20 @@ Mohon buatkan implementasi tahap pertama dari project ini berdasarkan PRD.`;
 
           <button
             type="button"
+            onClick={() => setViewMode("audit")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+              viewMode === "audit"
+                ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-sm font-semibold"
+                : "text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 border border-emerald-500/30"
+            }`}
+            title="Audit Kualitas & Akurasi 111-Check ScalerShare"
+          >
+            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Audit Akurasi ({auditResult.score}%)</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setViewMode("prompt")}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               viewMode === "prompt"
@@ -408,9 +432,21 @@ Mohon buatkan implementasi tahap pertama dari project ini berdasarkan PRD.`;
         </div>
 
         <div className="flex items-center gap-2">
+          {/* ScalerShare Quality Audit Badge */}
+          <button
+            type="button"
+            onClick={() => setViewMode("audit")}
+            className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-[11px] text-emerald-300 transition-all font-mono"
+            title="Klik untuk membuka Audit Akurasi 111-Check"
+          >
+            <span className="h-2 w-2 rounded-full bg-emerald-400" />
+            <span className="hidden md:inline text-slate-400">ScalerShare v4.1:</span>
+            <span className="font-bold">{auditResult.score}% ({auditResult.grade})</span>
+          </button>
+
           {/* Active AI Pill Badge (User match) */}
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-900 border border-white/10 text-[11px] text-slate-200">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="h-2 w-2 rounded-full bg-indigo-400 animate-pulse" />
             <span>
               {aiSource === "gemini"
                 ? `Gemini (${aiModel || "Flash"})`
@@ -617,6 +653,160 @@ Mohon buatkan implementasi tahap pertama dari project ini berdasarkan PRD.`;
             <pre className="p-5 rounded-xl bg-slate-950 border border-white/10 text-xs font-mono text-slate-200 overflow-x-auto whitespace-pre-wrap leading-relaxed">
               {extractCodingAgentPrompt()}
             </pre>
+          </div>
+        )}
+
+        {/* MODE 5: AUDIT AKURASI & KUALITAS PRODUKSI (111-POINT CHECK) */}
+        {viewMode === "audit" && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            {/* Top Metric Hero */}
+            <div className="p-6 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900/90 to-emerald-950/30 border border-emerald-500/30 shadow-xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
+              
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+                <div className="space-y-2">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-xs font-mono text-emerald-300">
+                    <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>ScalerShare PRD Generator v4.1 Engine</span>
+                    <span>•</span>
+                    <span>Production Readiness Verified</span>
+                  </div>
+
+                  <h3 className="font-display font-bold text-2xl sm:text-3xl text-white">
+                    Audit Akurasi & Kelayakan Produksi PRD
+                  </h3>
+
+                  <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
+                    {auditResult.summary}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-4 shrink-0 bg-slate-950/80 p-4 rounded-2xl border border-white/10">
+                  <div className="text-center">
+                    <div className="text-4xl sm:text-5xl font-extrabold font-display bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
+                      {auditResult.score}%
+                    </div>
+                    <div className="text-[11px] font-mono text-emerald-400 font-semibold mt-1">
+                      Grade: {auditResult.grade}
+                    </div>
+                  </div>
+                  <div className="h-12 w-px bg-white/10" />
+                  <div className="space-y-1 text-xs">
+                    <div className="text-emerald-400 flex items-center gap-1.5 font-medium">
+                      <span>✓</span>
+                      <span>{auditResult.passedChecks} Lolos Uji</span>
+                    </div>
+                    <div className="text-amber-400 flex items-center gap-1.5 font-medium">
+                      <span>⚠️</span>
+                      <span>{auditResult.warnChecks} Catatan</span>
+                    </div>
+                    <div className="text-slate-400 text-[11px]">
+                      Total {auditResult.totalChecks} Standar
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Category Breakdown Cards */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {auditResult.categories.map((cat) => (
+                <div
+                  key={cat.category}
+                  className="glass-panel p-5 rounded-2xl border border-white/10 space-y-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-semibold text-sm text-white">
+                        {cat.categoryName}
+                      </h4>
+                      <p className="text-[11px] text-slate-400">
+                        {cat.passed} dari {cat.total} kriteria lolos pengujian
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <span className={`text-base font-bold font-mono ${
+                        cat.score >= 90 ? "text-emerald-400" : cat.score >= 75 ? "text-amber-400" : "text-rose-400"
+                      }`}>
+                        {cat.score}%
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        cat.score >= 90 ? "bg-emerald-500" : cat.score >= 75 ? "bg-amber-500" : "bg-rose-500"
+                      }`}
+                      style={{ width: `${cat.score}%` }}
+                    />
+                  </div>
+
+                  {/* Items List */}
+                  <div className="space-y-2 pt-1">
+                    {cat.items.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-start gap-2.5 p-2.5 rounded-xl bg-slate-900/60 border border-white/5 text-xs"
+                      >
+                        <div className="mt-0.5 shrink-0">
+                          {item.status === "pass" ? (
+                            <span className="text-emerald-400 font-bold">✓</span>
+                          ) : item.status === "warn" ? (
+                            <span className="text-amber-400 font-bold">⚠️</span>
+                          ) : (
+                            <span className="text-rose-400 font-bold">✕</span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-semibold text-slate-200">
+                              {item.name}
+                            </span>
+                            <span className={`text-[10px] uppercase font-mono px-1.5 py-0.2 rounded ${
+                              item.status === "pass"
+                                ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
+                                : item.status === "warn"
+                                ? "bg-amber-500/15 text-amber-300 border border-amber-500/30"
+                                : "bg-rose-500/15 text-rose-300 border border-rose-500/30"
+                            }`}>
+                              {item.status}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">
+                            {item.description}
+                          </p>
+                          {item.detail && (
+                            <p className="text-[10px] text-slate-500 font-mono mt-1">
+                              Status: {item.detail}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Recommendations Section */}
+            <div className="p-5 rounded-2xl bg-slate-900/80 border border-white/10 space-y-3">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                <span>💡 Rekomendasi Eksekusi & Kesiapan Peluncuran</span>
+              </h4>
+              <ul className="space-y-2">
+                {auditResult.recommendations.map((rec, idx) => (
+                  <li
+                    key={idx}
+                    className="flex items-start gap-2.5 text-xs text-slate-300 bg-slate-950/60 p-2.5 rounded-xl border border-white/5"
+                  >
+                    <span className="text-brand-400 font-bold shrink-0">{idx + 1}.</span>
+                    <span>{rec}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         )}
 
