@@ -337,8 +337,15 @@ export default function PRDStudio() {
     setCurrentView("generator");
   }
 
-  // Apply extracted data from AI Chatbot into Form
+  // Apply extracted data from AI Chatbot into Form & langsung buat entri di Riwayat Proyek
   function handleApplyFromChat(data: ExtractedPRDData) {
+    const newProjectId = `prd-${Date.now()}`;
+    const projectTitle =
+      data.nama.trim() ||
+      (data.ide.trim() ? data.ide.trim().slice(0, 35) + "..." : "") ||
+      `Draft PRD (${new Date().toLocaleDateString("id-ID")})`;
+
+    setActiveProjectId(newProjectId);
     setNama(data.nama);
     setIde(data.ide);
     setCategory(data.category || "general");
@@ -346,8 +353,39 @@ export default function PRDStudio() {
     setStack(data.stack || TECH_STACK_PRESETS[0]);
     setTimeline(data.timeline || "2-4 Minggu (Fokus MVP)");
     setFeatures(data.features || []);
+    setMarkdown("");
+    setStatus("idle");
+    setErrorMsg("");
+
+    // Langsung buat dan simpan entri proyek baru ke Riwayat Proyek & Supabase
+    const newDraftProject: SavedPRDProject = {
+      id: newProjectId,
+      userId: currentUser?.id,
+      nama: projectTitle,
+      ide: data.ide.trim(),
+      category: data.category || "general",
+      target: data.target || "",
+      stack: data.stack || TECH_STACK_PRESETS[0],
+      timeline: data.timeline || "2-4 Minggu (Fokus MVP)",
+      features: data.features || [],
+      markdown: "",
+      model: activeEngine,
+      source: "gemini",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const updated = saveProject(newDraftProject, currentUser?.id);
+    setSavedProjects(updated);
+    skipAutoSaveRef.current = true;
+    setAutoSaveStatus("saved");
+    setLastAutoSavedTime(
+      new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+    );
+
     setCurrentView("generator");
-    showToast("Hasil konsultasi Chatbot berhasil dimasukkan ke formulir PRD!");
+    setIsChatbotOpen(false); // Otomatis tutup drawer chatbot agar workspace terlihat fokus
+    showToast(`Proyek "${projectTitle}" berhasil dibuat dan masuk ke Riwayat Proyek!`);
   }
 
   // Reset to create new project
