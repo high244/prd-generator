@@ -221,35 +221,6 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
           <p className="text-xs text-slate-400">
             Database Terproteksi Supabase Cloud • Akses Terotentikasi
           </p>
-
-          {/* Supabase Connection Status Badge */}
-          <div className="flex items-center justify-center pt-1">
-            <button
-              type="button"
-              onClick={() => setIsVercelModalOpen(true)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono border transition-all cursor-pointer ${
-                supabaseConnected
-                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20"
-                  : "bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20"
-              }`}
-            >
-              <span
-                className={`w-2 h-2 rounded-full shrink-0 ${
-                  supabaseConnected ? "bg-emerald-400 animate-pulse" : "bg-amber-400"
-                }`}
-              />
-              <span>
-                {supabaseConnected
-                  ? `Supabase Terhubung (${supabaseHost || "Cloud"})`
-                  : "Supabase Belum Konek di Vercel — Klik Cara Konek"}
-              </span>
-              <svg className="w-3 h-3 ml-0.5 opacity-70 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="16" x2="12" y2="12" />
-                <line x1="12" y1="8" x2="12.01" y2="8" />
-              </svg>
-            </button>
-          </div>
         </div>
 
         {/* Tab Switcher */}
