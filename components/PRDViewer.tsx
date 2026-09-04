@@ -289,19 +289,6 @@ Mohon buatkan implementasi tahap pertama dari project ini berdasarkan PRD.`;
             📄 Dokumen Lengkap
           </button>
 
-          <button
-            type="button"
-            onClick={() => setViewMode("audit")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
-              viewMode === "audit"
-                ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-sm font-semibold"
-                : "text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 border border-emerald-500/30"
-            }`}
-            title="Audit Kualitas & Akurasi 111-Check ScalerShare"
-          >
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Audit Akurasi ({auditResult.score}%)</span>
-          </button>
 
           <button
             type="button"
@@ -432,18 +419,6 @@ Mohon buatkan implementasi tahap pertama dari project ini berdasarkan PRD.`;
         </div>
 
         <div className="flex items-center gap-2">
-          {/* ScalerShare Quality Audit Badge */}
-          <button
-            type="button"
-            onClick={() => setViewMode("audit")}
-            className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-[11px] text-emerald-300 transition-all font-mono"
-            title="Klik untuk membuka Audit Akurasi 111-Check"
-          >
-            <span className="h-2 w-2 rounded-full bg-emerald-400" />
-            <span className="hidden md:inline text-slate-400">ScalerShare v4.1:</span>
-            <span className="font-bold">{auditResult.score}% ({auditResult.grade})</span>
-          </button>
-
           {/* Active AI Pill Badge (User match) */}
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-900 border border-white/10 text-[11px] text-slate-200">
             <span className="h-2 w-2 rounded-full bg-indigo-400 animate-pulse" />
