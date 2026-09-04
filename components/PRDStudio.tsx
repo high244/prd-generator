@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Sidebar from "./Sidebar";
 import DashboardView from "./DashboardView";
 import PRDViewer from "./PRDViewer";
@@ -133,8 +133,15 @@ export default function PRDStudio() {
   const [aiModel, setAiModel] = useState<string>("");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Auto Save Draft States
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [lastAutoSavedTime, setLastAutoSavedTime] = useState<string | null>(null);
+  const skipAutoSaveRef = useRef(true);
+
   // Reset everything to default clean dashboard (default model gemini-3.6-flash, clean draft)
   function resetToDefaultState() {
+    skipAutoSaveRef.current = true;
+    setAutoSaveStatus("idle");
     setActiveProjectId(null);
     setNama("");
     setIde("");
@@ -168,6 +175,39 @@ export default function PRDStudio() {
       });
     }
   }, []);
+
+  // Debounced Auto Save Draft Effect
+  useEffect(() => {
+    if (currentView !== "generator") return;
+    if (skipAutoSaveRef.current) {
+      skipAutoSaveRef.current = false;
+      return;
+    }
+
+    const hasData = Boolean(
+      nama.trim() || ide.trim() || target.trim() || features.length > 0 || markdown.trim()
+    );
+    if (!hasData) {
+      setAutoSaveStatus("idle");
+      return;
+    }
+
+    setAutoSaveStatus("saving");
+    const timer = setTimeout(() => {
+      const savedId = saveCurrentDraftToHistory(false);
+      if (savedId) {
+        setAutoSaveStatus("saved");
+        const now = new Date();
+        setLastAutoSavedTime(
+          now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+        );
+      } else {
+        setAutoSaveStatus("idle");
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [nama, ide, category, target, stack, timeline, features, markdown, currentView]);
 
   function showToast(msg: string) {
     setToastMessage(msg);
@@ -271,16 +311,8 @@ export default function PRDStudio() {
 
   // Exit from workspace back to dashboard with auto-saved draft
   function handleExitWorkspace() {
-    saveCurrentDraftToHistory(true);
+    saveCurrentDraftToHistory(false);
     setCurrentView("dashboard");
-  }
-
-  // Manual save draft
-  function handleSaveDraft() {
-    const saved = saveCurrentDraftToHistory(true);
-    if (!saved) {
-      showToast("Belum ada data konsep atau fitur yang diisi untuk disimpan.");
-    }
   }
 
   // Open existing project from history/dashboard
@@ -288,6 +320,8 @@ export default function PRDStudio() {
     if (currentView === "generator" && activeProjectId !== project.id) {
       saveCurrentDraftToHistory(false);
     }
+    skipAutoSaveRef.current = true;
+    setAutoSaveStatus("saved");
     setActiveProjectId(project.id);
     setNama(project.nama);
     setIde(project.ide);
@@ -321,6 +355,8 @@ export default function PRDStudio() {
     if (currentView === "generator") {
       saveCurrentDraftToHistory(false);
     }
+    skipAutoSaveRef.current = true;
+    setAutoSaveStatus("idle");
     setActiveProjectId(null);
     setNama("");
     setIde("");
@@ -704,20 +740,34 @@ export default function PRDStudio() {
                   </div>
 
                   <div className="flex items-center gap-2.5">
-                    {/* Manual Save Draft button */}
-                    <button
-                      type="button"
-                      onClick={handleSaveDraft}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 text-xs font-medium transition-all"
-                      title="Simpan Draft ke Riwayat Proyek"
+                    {/* Auto Save Draft Status Indicator */}
+                    <div
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900/80 border border-white/10 text-xs font-mono select-none"
+                      title="Draft perubahan otomatis disimpan ke riwayat proyek"
                     >
-                      <svg className="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-                        <polyline points="17 21 17 13 7 13 7 21" />
-                        <polyline points="7 3 7 8 15 8" />
-                      </svg>
-                      <span className="hidden sm:inline">Simpan Draft</span>
-                    </button>
+                      {autoSaveStatus === "saving" ? (
+                        <>
+                          <svg className="w-3.5 h-3.5 text-amber-400 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                          <span className="text-amber-300">Menyimpan draft...</span>
+                        </>
+                      ) : autoSaveStatus === "saved" ? (
+                        <>
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                          <span className="text-emerald-300 font-medium">Auto-save: Tersimpan</span>
+                          {lastAutoSavedTime && (
+                            <span className="text-[10px] text-slate-500 hidden sm:inline font-mono">({lastAutoSavedTime})</span>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <span className="w-2 h-2 rounded-full bg-emerald-400/60" />
+                          <span className="text-slate-300">Auto Save Aktif</span>
+                        </>
+                      )}
+                    </div>
 
                     <span className="text-xs text-slate-400 hidden md:inline">Engine:</span>
                     {currentUser.plan === "pro" ? (
