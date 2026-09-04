@@ -16,7 +16,6 @@ interface SidebarProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   currentUser: UserProfile;
-  sessionTimeoutMinutes?: number;
   onLogout: () => void;
 }
 
@@ -31,7 +30,6 @@ export default function Sidebar({
   isCollapsed,
   onToggleCollapse,
   currentUser,
-  sessionTimeoutMinutes,
   onLogout,
 }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -262,16 +260,8 @@ export default function Sidebar({
                     <span className="text-[9px] px-1.5 py-0.2 rounded bg-white/10 text-slate-400 font-mono shrink-0">FREE</span>
                   )}
                 </div>
-                <div className="text-[10px] text-slate-500 truncate font-mono flex items-center gap-1.5 mt-0.5">
-                  <span className="truncate">{currentUser.email || "Active Session"}</span>
-                  {sessionTimeoutMinutes && (
-                    <span
-                      className="text-[9px] px-1.5 py-0.2 rounded bg-slate-900 border border-white/10 text-cyan-300 font-medium shrink-0"
-                      title={`Auto-logout aktif jika tidak ada aktivitas selama ${sessionTimeoutMinutes} menit`}
-                    >
-                      ⏱️ {sessionTimeoutMinutes}m
-                    </span>
-                  )}
+                <div className="text-[10px] text-slate-500 truncate font-mono">
+                  {currentUser.email || "Active Session"}
                 </div>
               </div>
             </div>

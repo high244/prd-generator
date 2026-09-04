@@ -93,18 +93,9 @@ export async function checkSupabaseHealth(): Promise<{
   }
 }
 
-// Key Local Storage & Timeout Settings
-export const AUTH_SESSION_KEY = "prd_architect_user_session_v2";
-export const REGISTERED_USERS_KEY = "prd_architect_registered_users_v2";
-export const SESSION_EXPIRED_KEY = "prd_architect_session_expired_notice";
-export const DEFAULT_SESSION_TIMEOUT_MINUTES = 15;
-
-export interface StoredSessionPayload {
-  user: UserProfile;
-  loginAt: number;
-  lastActiveAt: number;
-  timeoutMinutes: number;
-}
+// Key Local Storage
+const AUTH_SESSION_KEY = "prd_architect_user_session_v2";
+const REGISTERED_USERS_KEY = "prd_architect_registered_users_v2";
 
 // Akun Bawaan Sistem
 export const SEED_ACCOUNTS = [
@@ -142,84 +133,9 @@ function getStoredUsers() {
   }
 }
 
-export function saveUserSession(
-  user: UserProfile,
-  timeoutMinutes: number = DEFAULT_SESSION_TIMEOUT_MINUTES
-): void {
-  if (typeof window === "undefined") return;
-  const validMinutes = timeoutMinutes > 0 ? timeoutMinutes : DEFAULT_SESSION_TIMEOUT_MINUTES;
-  const payload: StoredSessionPayload = {
-    user,
-    loginAt: Date.now(),
-    lastActiveAt: Date.now(),
-    timeoutMinutes: validMinutes,
-  };
-  localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(payload));
-  // Hapus notice expired sebelumnya jika berhasil login baru
-  localStorage.removeItem(SESSION_EXPIRED_KEY);
-}
-
-export function refreshUserSessionActivity(): void {
-  if (typeof window === "undefined") return;
-  try {
-    const raw = localStorage.getItem(AUTH_SESSION_KEY);
-    if (!raw) return;
-    const parsed = JSON.parse(raw);
-    if (parsed && parsed.user) {
-      parsed.lastActiveAt = Date.now();
-      localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(parsed));
-    }
-  } catch {}
-}
-
-export function getSessionTimeoutMinutes(): number {
-  if (typeof window === "undefined") return DEFAULT_SESSION_TIMEOUT_MINUTES;
-  try {
-    const raw = localStorage.getItem(AUTH_SESSION_KEY);
-    if (!raw) return DEFAULT_SESSION_TIMEOUT_MINUTES;
-    const parsed = JSON.parse(raw);
-    return parsed?.timeoutMinutes || DEFAULT_SESSION_TIMEOUT_MINUTES;
-  } catch {
-    return DEFAULT_SESSION_TIMEOUT_MINUTES;
-  }
-}
-
-export function getSessionRemainingSeconds(): number {
-  if (typeof window === "undefined") return 0;
-  try {
-    const raw = localStorage.getItem(AUTH_SESSION_KEY);
-    if (!raw) return 0;
-    const parsed = JSON.parse(raw);
-    if (!parsed || !parsed.user) return 0;
-    const timeoutMs = (parsed.timeoutMinutes || DEFAULT_SESSION_TIMEOUT_MINUTES) * 60 * 1000;
-    const elapsed = Date.now() - (parsed.lastActiveAt || parsed.loginAt || Date.now());
-    const remainingMs = timeoutMs - elapsed;
-    return Math.max(0, Math.floor(remainingMs / 1000));
-  } catch {
-    return 0;
-  }
-}
-
-export function getSessionExpiredNotice(): string | null {
-  if (typeof window === "undefined") return null;
-  try {
-    return localStorage.getItem(SESSION_EXPIRED_KEY);
-  } catch {
-    return null;
-  }
-}
-
-export function clearSessionExpiredNotice(): void {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.removeItem(SESSION_EXPIRED_KEY);
-  } catch {}
-}
-
 export async function loginWithPassword(
   emailOrUsername: string,
-  pass: string,
-  timeoutMinutes: number = DEFAULT_SESSION_TIMEOUT_MINUTES
+  pass: string
 ): Promise<{ user: UserProfile | null; error?: string }> {
   const cleanInput = emailOrUsername.trim().toLowerCase();
   const cleanPass = pass.trim();
@@ -257,7 +173,9 @@ export async function loginWithPassword(
           plan,
         };
 
-        saveUserSession(userProfile, timeoutMinutes);
+        if (typeof window !== "undefined") {
+          localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(userProfile));
+        }
         return { user: userProfile };
       }
     } catch (sbErr) {
@@ -288,7 +206,10 @@ export async function loginWithPassword(
     plan: found.plan,
   };
 
-  saveUserSession(userProfile, timeoutMinutes);
+  if (typeof window !== "undefined") {
+    localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(userProfile));
+  }
+
   return { user: userProfile };
 }
 
@@ -303,8 +224,7 @@ export interface RegisterNewUserData {
 }
 
 export async function registerNewUser(
-  input: RegisterNewUserData,
-  timeoutMinutes: number = DEFAULT_SESSION_TIMEOUT_MINUTES
+  input: RegisterNewUserData
 ): Promise<{ user: UserProfile | null; error?: string }> {
   const cleanEmail = input.email.trim().toLowerCase();
   const cleanPass = input.password.trim();
@@ -363,7 +283,9 @@ export async function registerNewUser(
           plan,
         };
 
-        saveUserSession(userProfile, timeoutMinutes);
+        if (typeof window !== "undefined") {
+          localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(userProfile));
+        }
         return { user: userProfile };
       } else if (error) {
         return { user: null, error: error.message };
@@ -408,7 +330,10 @@ export async function registerNewUser(
     plan,
   };
 
-  saveUserSession(userProfile, timeoutMinutes);
+  if (typeof window !== "undefined") {
+    localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(userProfile));
+  }
+
   return { user: userProfile };
 }
 
@@ -417,47 +342,16 @@ export function getCurrentUserSession(): UserProfile | null {
   try {
     const raw = localStorage.getItem(AUTH_SESSION_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw);
-
-    // Format StoredSessionPayload: { user, loginAt, lastActiveAt, timeoutMinutes }
-    if (parsed && parsed.user) {
-      const timeoutMinutes = parsed.timeoutMinutes || DEFAULT_SESSION_TIMEOUT_MINUTES;
-      const timeoutMs = timeoutMinutes * 60 * 1000;
-      const lastActive = parsed.lastActiveAt || parsed.loginAt || 0;
-      const now = Date.now();
-
-      if (now - lastActive > timeoutMs) {
-        // Waktu habis! Sesi berakhir dan user harus login ulang (tidak boleh masuk dashboard)
-        logoutUserSession(
-          `Sesi Anda telah berakhir karena tidak ada aktivitas selama ${timeoutMinutes} menit. Silakan login kembali untuk masuk ke dashboard.`
-        );
-        return null;
-      }
-
-      return parsed.user;
-    }
-
-    // Format lama: langsung UserProfile (migrasikan ke format baru)
-    if (parsed && parsed.id && parsed.email) {
-      saveUserSession(parsed, DEFAULT_SESSION_TIMEOUT_MINUTES);
-      return parsed;
-    }
-
-    return null;
+    return JSON.parse(raw);
   } catch {
     return null;
   }
 }
 
-export function logoutUserSession(expiredReason?: string): void {
+export function logoutUserSession(): void {
   if (typeof window === "undefined") return;
   try {
     localStorage.removeItem(AUTH_SESSION_KEY);
-    if (expiredReason) {
-      localStorage.setItem(SESSION_EXPIRED_KEY, expiredReason);
-    } else {
-      localStorage.removeItem(SESSION_EXPIRED_KEY);
-    }
     if (supabaseInstance) {
       supabaseInstance.auth.signOut().catch(() => {});
     }

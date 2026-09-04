@@ -2,13 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { UserProfile } from "@/lib/types";
-import {
-  loginWithPassword,
-  registerNewUser,
-  getSessionExpiredNotice,
-  clearSessionExpiredNotice,
-  DEFAULT_SESSION_TIMEOUT_MINUTES,
-} from "@/lib/supabase";
+import { loginWithPassword, registerNewUser } from "@/lib/supabase";
 import { validateDefenderPayload, checkAutomatedDriver } from "@/lib/defender";
 import VercelConnectionModal from "./VercelConnectionModal";
 
@@ -23,8 +17,6 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
   const [emailOrUsername, setEmailOrUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [showLoginPassword, setShowLoginPassword] = useState(false);
-  const [sessionTimeoutMinutes, setSessionTimeoutMinutes] = useState<number>(DEFAULT_SESSION_TIMEOUT_MINUTES);
-  const [expiredNotice, setExpiredNotice] = useState<string | null>(null);
   
   // Complete Registration Form State
   const [regFullName, setRegFullName] = useState("");
@@ -57,11 +49,6 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
   const [supabaseHost, setSupabaseHost] = useState("");
 
   useEffect(() => {
-    const notice = getSessionExpiredNotice();
-    if (notice) {
-      setExpiredNotice(notice);
-    }
-
     fetch("/api/system-status")
       .then((r) => r.json())
       .then((data) => {
@@ -132,12 +119,10 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
     e.preventDefault();
     setErrorMsg("");
     setSuccessNotice("");
-    setExpiredNotice(null);
-    clearSessionExpiredNotice();
     setIsLoading(true);
 
     try {
-      const res = await loginWithPassword(emailOrUsername, loginPassword, sessionTimeoutMinutes);
+      const res = await loginWithPassword(emailOrUsername, loginPassword);
       if (res.error || !res.user) {
         setErrorMsg(res.error || "Gagal masuk. Periksa kembali username dan password Anda.");
       } else {
@@ -195,18 +180,15 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
     // 4. Jika memiliki invite code admin, daftarkan ke database Supabase
     setIsLoading(true);
     try {
-      const res = await registerNewUser(
-        {
-          name: regFullName,
-          username: regUsername,
-          email: regEmail,
-          password: regPassword,
-          phone: regPhone,
-          organization: regOrganization,
-          role: regRole,
-        },
-        sessionTimeoutMinutes
-      );
+      const res = await registerNewUser({
+        name: regFullName,
+        username: regUsername,
+        email: regEmail,
+        password: regPassword,
+        phone: regPhone,
+        organization: regOrganization,
+        role: regRole,
+      });
 
       if (res.error || !res.user) {
         setErrorMsg(res.error || "Pendaftaran gagal.");
@@ -277,28 +259,6 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
             </span>
           </button>
         </div>
-
-        {/* Session Expired Alert Banner */}
-        {expiredNotice && (
-          <div className="p-3.5 rounded-2xl bg-amber-500/15 border border-amber-500/40 text-amber-200 text-xs flex items-start gap-3 animate-in fade-in">
-            <span className="text-lg leading-none mt-0.5">⏱️</span>
-            <div className="flex-1 leading-relaxed">
-              <span className="font-semibold text-amber-300 block mb-0.5">Sesi Berakhir Demi Keamanan</span>
-              <span>{expiredNotice}</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setExpiredNotice(null);
-                clearSessionExpiredNotice();
-              }}
-              className="text-amber-400 hover:text-white p-1"
-              title="Tutup pemberitahuan"
-            >
-              ✕
-            </button>
-          </div>
-        )}
 
         {/* Success / Notice Alert */}
         {successNotice && (
@@ -390,43 +350,6 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
                   )}
                 </button>
               </div>
-            </div>
-
-            {/* Session Timeout / Inactivity Limit Selector */}
-            <div className="p-3 rounded-xl bg-slate-950/60 border border-white/10 space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                  <span>⏱️ Batas Inaktivitas Sesi</span>
-                </label>
-                <span className="text-[10px] text-brand-300 font-mono font-medium px-2 py-0.5 rounded bg-brand-500/10 border border-brand-500/20">
-                  {sessionTimeoutMinutes} Menit Idle
-                </span>
-              </div>
-              <div className="grid grid-cols-4 gap-1.5">
-                {[
-                  { value: 5, label: "5 Mnt", sub: "Ketat" },
-                  { value: 15, label: "15 Mnt", sub: "Standar" },
-                  { value: 30, label: "30 Mnt", sub: "Santai" },
-                  { value: 60, label: "60 Mnt", sub: "1 Jam" },
-                ].map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setSessionTimeoutMinutes(opt.value)}
-                    className={`py-1.5 px-2 rounded-lg border text-center transition-all cursor-pointer ${
-                      sessionTimeoutMinutes === opt.value
-                        ? "bg-brand-500/25 border-brand-500 text-white font-semibold shadow-glow"
-                        : "bg-slate-900/60 border-white/5 text-slate-400 hover:text-slate-200"
-                    }`}
-                  >
-                    <div className="text-xs">{opt.label}</div>
-                    <div className="text-[9px] text-slate-500">{opt.sub}</div>
-                  </button>
-                ))}
-              </div>
-              <p className="text-[10px] text-slate-400 leading-relaxed">
-                🛡️ Jika tidak ada aktivitas selama <strong>{sessionTimeoutMinutes} menit</strong>, Anda akan keluar otomatis dan wajib login kembali (mencegah akses langsung ke dashboard).
-              </p>
             </div>
 
             <button
