@@ -12,6 +12,23 @@ export interface UserProfile {
   createdAt?: string;
 }
 
+export interface SavedChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  extracted?: {
+    nama: string;
+    ide: string;
+    category: string;
+    target: string;
+    stack: string;
+    timeline: string;
+    features: FeatureItem[];
+  };
+  timestamp: string;
+  discoveryDimension?: string | null;
+}
+
 export interface SavedPRDProject {
   id: string;
   userId?: string; // Isolasi riwayat per akun
@@ -25,6 +42,8 @@ export interface SavedPRDProject {
   markdown: string;
   model: string;
   source: "gemini" | "claude" | "fallback";
+  chatHistory?: SavedChatMessage[];
+  chatMode?: "quick" | "discovery";
   createdAt: string; // ISO string
   updatedAt: string; // ISO string
 }

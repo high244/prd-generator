@@ -211,6 +211,17 @@ export default function Sidebar({
                       <span className="capitalize">{project.category || "General"}</span>
                       <span>•</span>
                       <span>{formatRelativeDate(project.createdAt)}</span>
+                      {project.chatHistory && project.chatHistory.length > 1 && (
+                        <>
+                          <span>•</span>
+                          <span
+                            className="text-indigo-400 flex items-center gap-0.5 font-medium"
+                            title={`${project.chatHistory.length} riwayat konsultasi AI tersimpan`}
+                          >
+                            💬 {project.chatHistory.length}
+                          </span>
+                        </>
+                      )}
                       {!project.markdown && (
                         <>
                           <span>•</span>

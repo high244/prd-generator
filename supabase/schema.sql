@@ -66,6 +66,8 @@ CREATE TABLE IF NOT EXISTS public.prd_projects (
   markdown TEXT NOT NULL,
   model TEXT NOT NULL,
   source TEXT NOT NULL DEFAULT 'gemini',
+  chat_history JSONB DEFAULT '[]'::jsonb,
+  chat_mode TEXT DEFAULT 'discovery',
   created_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc'::text, NOW()),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc'::text, NOW())
 );

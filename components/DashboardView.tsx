@@ -360,6 +360,14 @@ export default function DashboardView({
                           ⚡ {project.features.length} Fitur
                         </span>
                       )}
+                      {project.chatHistory && project.chatHistory.length > 1 && (
+                        <span
+                          className="px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 flex items-center gap-1 font-medium"
+                          title={`${project.chatHistory.length} riwayat konsultasi AI tersimpan`}
+                        >
+                          💬 {project.chatHistory.length} Chat
+                        </span>
+                      )}
                     </div>
                   </div>
 

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import type { FeatureItem } from "@/lib/prompt";
-import type { AIEngineOption } from "@/lib/types";
+import type { AIEngineOption, SavedChatMessage } from "@/lib/types";
 
 export interface ExtractedPRDData {
   nama: string;
@@ -16,14 +16,7 @@ export interface ExtractedPRDData {
 
 export type ChatMode = "quick" | "discovery";
 
-interface ChatMessage {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  extracted?: ExtractedPRDData;
-  timestamp: string;
-  discoveryDimension?: string | null;
-}
+export type ChatMessage = SavedChatMessage;
 
 interface AIChatbotAssistantProps {
   activeEngine: AIEngineOption;
@@ -31,6 +24,9 @@ interface AIChatbotAssistantProps {
   onClose?: () => void;
   chatMode?: ChatMode;
   onChatModeChange?: (mode: ChatMode) => void;
+  messages?: ChatMessage[];
+  onMessagesChange?: (messages: ChatMessage[]) => void;
+  projectTitle?: string;
 }
 
 // ─── Discovery Dimensions ────────────────────────────────────────────────────
@@ -64,13 +60,20 @@ export default function AIChatbotAssistant({
   onClose,
   chatMode = "quick",
   onChatModeChange,
+  messages: externalMessages,
+  onMessagesChange,
+  projectTitle,
 }: AIChatbotAssistantProps) {
   const [mode, setMode] = useState<ChatMode>(chatMode);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    if (externalMessages && externalMessages.length > 0) return externalMessages;
+    return [];
+  });
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [discoveredDimensions, setDiscoveredDimensions] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const lastEmittedMessagesRef = useRef<ChatMessage[] | null>(null);
 
   // Sync external mode prop
   useEffect(() => {
@@ -87,11 +90,38 @@ export default function AIChatbotAssistant({
     timestamp: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
   }), []);
 
-  // Initialize welcome message
+  // Sync incoming external messages from active project
   useEffect(() => {
-    setMessages([getWelcomeMessage(mode)]);
-    setDiscoveredDimensions(new Set());
-  }, [mode, getWelcomeMessage]);
+    if (externalMessages && externalMessages === lastEmittedMessagesRef.current) {
+      return;
+    }
+
+    if (externalMessages && externalMessages.length > 0) {
+      setMessages(externalMessages);
+      const dims = new Set<string>();
+      for (const m of externalMessages) {
+        if (m.discoveryDimension) dims.add(m.discoveryDimension);
+        else if (m.content) {
+          const d = detectDimension(m.content);
+          if (d) dims.add(d);
+        }
+      }
+      setDiscoveredDimensions(dims);
+    } else {
+      const welcome = getWelcomeMessage(mode);
+      setMessages([welcome]);
+      setDiscoveredDimensions(new Set());
+    }
+  }, [externalMessages, mode, getWelcomeMessage]);
+
+  const updateMessages = useCallback(
+    (newMessages: ChatMessage[]) => {
+      setMessages(newMessages);
+      lastEmittedMessagesRef.current = newMessages;
+      onMessagesChange?.(newMessages);
+    },
+    [onMessagesChange]
+  );
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -117,6 +147,11 @@ export default function AIChatbotAssistant({
     if (newMode === mode) return;
     setMode(newMode);
     onChatModeChange?.(newMode);
+    if (messages.length <= 1) {
+      const welcome = getWelcomeMessage(newMode);
+      updateMessages([welcome]);
+      setDiscoveredDimensions(new Set());
+    }
   }
 
   async function handleSendMessage(textToSend?: string) {
@@ -131,12 +166,13 @@ export default function AIChatbotAssistant({
       timestamp: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    const updatedWithUser = [...messages, userMsg];
+    updateMessages(updatedWithUser);
     setInputValue("");
     setIsLoading(true);
 
     try {
-      const historyForApi = [...messages, userMsg].map((m) => ({
+      const historyForApi = updatedWithUser.map((m) => ({
         role: m.role,
         content: m.content,
       }));
@@ -157,10 +193,11 @@ export default function AIChatbotAssistant({
       }
 
       // Track discovered dimensions
+      let detectedDim: string | null = null;
       if (mode === "discovery" && data.reply) {
-        const detected = data.discoveryDimension || detectDimension(data.reply);
-        if (detected) {
-          setDiscoveredDimensions(prev => new Set(prev).add(detected));
+        detectedDim = data.discoveryDimension || detectDimension(data.reply);
+        if (detectedDim) {
+          setDiscoveredDimensions((prev) => new Set(prev).add(detectedDim!));
         }
       }
 
@@ -170,10 +207,10 @@ export default function AIChatbotAssistant({
         content: data.reply || "Saya sudah merangkum kebutuhan produk Anda di bawah ini:",
         extracted: data.extracted,
         timestamp: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
-        discoveryDimension: data.discoveryDimension,
+        discoveryDimension: detectedDim || data.discoveryDimension,
       };
 
-      setMessages((prev) => [...prev, assistantMsg]);
+      updateMessages([...updatedWithUser, assistantMsg]);
     } catch (err) {
       console.error(err);
       const errorMsg: ChatMessage = {
@@ -182,7 +219,7 @@ export default function AIChatbotAssistant({
         content: "Maaf, terjadi kendala saat memproses obrolan. Silakan coba lagi.",
         timestamp: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
       };
-      setMessages((prev) => [...prev, errorMsg]);
+      updateMessages([...updatedWithUser, errorMsg]);
     } finally {
       setIsLoading(false);
     }
@@ -230,7 +267,11 @@ export default function AIChatbotAssistant({
               }`} />
             </div>
             <p className="text-[10px] text-slate-400 truncate">
-              {mode === "discovery" ? "Wawancara Produk Mendalam" : "Konsultasi Produk & Arsitektur"}
+              {projectTitle
+                ? `Tersimpan di: ${projectTitle}`
+                : mode === "discovery"
+                  ? "Wawancara Produk Mendalam"
+                  : "Konsultasi Produk & Arsitektur"}
             </p>
           </div>
         </div>
@@ -268,7 +309,8 @@ export default function AIChatbotAssistant({
           <button
             type="button"
             onClick={() => {
-              setMessages([getWelcomeMessage(mode)]);
+              const welcome = getWelcomeMessage(mode);
+              updateMessages([welcome]);
               setDiscoveredDimensions(new Set());
             }}
             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900 transition-colors"

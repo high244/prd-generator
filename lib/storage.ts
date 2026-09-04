@@ -149,6 +149,28 @@ Bangun fondasi sistem "MediBridge AI" menggunakan Next.js 14, Tailwind CSS, dan 
 \`\`\``,
   model: "gemini-3.6-flash",
   source: "gemini",
+  chatMode: "discovery",
+  chatHistory: [
+    {
+      id: "msg-mb-1",
+      role: "assistant",
+      content: "Halo! Saya adalah **AI Product Discovery Partner** Anda. 🔍\n\nDi mode ini, saya akan menggali ide produk Anda secara mendalam melalui wawancara terstruktur.\n\nCeritakan ide produk Anda, dan mari kita mulai menggali bersama! 🚀",
+      timestamp: "09:00",
+    },
+    {
+      id: "msg-mb-2",
+      role: "user",
+      content: "Platform enterprise SaaS terintegrasi untuk Rumah Sakit & Jaringan Faskes: Rekam Medis Elektronik (RME) SatuSehat FHIR v4.0, Telekonsultasi dokter WebRTC, dan bridging klaim BPJS.",
+      timestamp: "09:01",
+    },
+    {
+      id: "msg-mb-3",
+      role: "assistant",
+      content: "Spesifikasi arsitektur klinis yang sangat komprehensif! [📍 Dimensi: Origin & Regulasi]\n\nSaya telah memetakan kebutuhan interoperabilitas SatuSehat Permenkes No. 24/2022, telemedis E2EE, dan sistem klaim BPJS ke dalam rancangan MVP.",
+      timestamp: "09:02",
+      discoveryDimension: "origin",
+    },
+  ],
   createdAt: "2026-09-04T09:00:00.000Z",
   updatedAt: "2026-09-04T09:00:00.000Z",
 };
@@ -232,6 +254,27 @@ Bangun aplikasi self-order Kopi Nusantara Hub menggunakan Next.js 14, Tailwind C
 \`\`\``,
   model: "gemini-3.6-flash",
   source: "gemini",
+  chatMode: "quick",
+  chatHistory: [
+    {
+      id: "msg-kp-1",
+      role: "assistant",
+      content: "Halo! Saya adalah **AI Product Consultant** Anda. 🚀\n\nCeritakan apa yang diinginkan oleh Anda atau klien Anda dengan bahasa santai.",
+      timestamp: "09:15",
+    },
+    {
+      id: "msg-kp-2",
+      role: "user",
+      content: "Aplikasi pemesanan kopi online untuk kedai lokal. Scan QR meja, pesan pickup/dine-in tanpa antre, bayar QRIS, dan poin loyalitas.",
+      timestamp: "09:15",
+    },
+    {
+      id: "msg-kp-3",
+      role: "assistant",
+      content: "Siap! Kebutuhan self-order kedai kopi modern sudah dipetakan dengan flow cepat: Menu QR, QRIS checkout instant, dan layar antrean barista.",
+      timestamp: "09:16",
+    },
+  ],
   createdAt: "2026-09-04T09:15:00.000Z",
   updatedAt: "2026-09-04T09:15:00.000Z",
 };
@@ -349,6 +392,8 @@ export function saveProject(project: SavedPRDProject, userId?: string): SavedPRD
                 markdown: projectWithUser.markdown,
                 model: projectWithUser.model || "gemini-3.6-flash",
                 source: projectWithUser.source || "gemini",
+                chat_history: projectWithUser.chatHistory || [],
+                chat_mode: projectWithUser.chatMode || "discovery",
                 updated_at: new Date().toISOString(),
               });
               if (error) console.warn("Supabase project sync warning:", error.message);
@@ -445,6 +490,8 @@ export async function syncProjectsFromSupabase(userId?: string): Promise<SavedPR
         markdown: row.markdown,
         model: row.model,
         source: row.source as any,
+        chatHistory: Array.isArray(row.chat_history) ? row.chat_history : [],
+        chatMode: (row.chat_mode as any) || "discovery",
         createdAt: row.created_at,
         updatedAt: row.updated_at,
       }));

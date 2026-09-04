@@ -9,6 +9,7 @@ import AIChatbotAssistant, { ExtractedPRDData, ChatMode } from "./AIChatbotAssis
 import AuthGate from "./AuthGate";
 import {
   SavedPRDProject,
+  SavedChatMessage,
   AIEngineOption,
   AI_ENGINE_OPTIONS,
   UserProfile,
@@ -101,6 +102,7 @@ export default function PRDStudio() {
   const [currentView, setCurrentView] = useState<"dashboard" | "generator">("dashboard");
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
   const [chatMode, setChatMode] = useState<ChatMode>("quick");
+  const [chatMessages, setChatMessages] = useState<SavedChatMessage[]>([]);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isEngineModalOpen, setIsEngineModalOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
@@ -155,6 +157,8 @@ export default function PRDStudio() {
     setErrorMsg("");
     setActiveEngine("gemini-3.6-flash");
     saveActiveEngine("gemini-3.6-flash");
+    setChatMessages([]);
+    setChatMode("quick");
     setCurrentView("dashboard");
   }
 
@@ -185,7 +189,12 @@ export default function PRDStudio() {
     }
 
     const hasData = Boolean(
-      nama.trim() || ide.trim() || target.trim() || features.length > 0 || markdown.trim()
+      nama.trim() ||
+      ide.trim() ||
+      target.trim() ||
+      features.length > 0 ||
+      markdown.trim() ||
+      chatMessages.length > 1
     );
     if (!hasData) {
       setAutoSaveStatus("idle");
@@ -207,7 +216,7 @@ export default function PRDStudio() {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [nama, ide, category, target, stack, timeline, features, markdown, currentView]);
+  }, [nama, ide, category, target, stack, timeline, features, markdown, chatMessages, chatMode, currentView]);
 
   function showToast(msg: string) {
     setToastMessage(msg);
@@ -269,16 +278,19 @@ export default function PRDStudio() {
       Boolean(ide.trim()) ||
       Boolean(target.trim()) ||
       features.length > 0 ||
-      Boolean(markdown.trim());
+      Boolean(markdown.trim()) ||
+      chatMessages.length > 1;
 
     if (!hasDraftData) {
       return null;
     }
 
     const idToSave = activeProjectId || `prd-${Date.now()}`;
+    const firstUserMsg = chatMessages.find((m) => m.role === "user")?.content;
     const projectTitle =
       nama.trim() ||
       (ide.trim() ? ide.trim().slice(0, 35) + "..." : "") ||
+      (firstUserMsg ? firstUserMsg.slice(0, 35) + "..." : "") ||
       `Draft PRD (${new Date().toLocaleDateString("id-ID")})`;
 
     const draftProject: SavedPRDProject = {
@@ -294,6 +306,8 @@ export default function PRDStudio() {
       markdown: markdown || "",
       model: aiModel || activeEngine,
       source: aiSource || "gemini",
+      chatHistory: chatMessages,
+      chatMode: chatMode,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -334,12 +348,14 @@ export default function PRDStudio() {
     setAiSource(project.source || "gemini");
     setAiModel(project.model || "");
     setStatus(project.markdown ? "success" : "idle");
+    setChatMessages(project.chatHistory && project.chatHistory.length > 0 ? project.chatHistory : []);
+    setChatMode(project.chatMode || "discovery");
     setCurrentView("generator");
   }
 
   // Apply extracted data from AI Chatbot into Form & langsung buat entri di Riwayat Proyek
   function handleApplyFromChat(data: ExtractedPRDData) {
-    const newProjectId = `prd-${Date.now()}`;
+    const newProjectId = activeProjectId || `prd-${Date.now()}`;
     const projectTitle =
       data.nama.trim() ||
       (data.ide.trim() ? data.ide.trim().slice(0, 35) + "..." : "") ||
@@ -371,6 +387,8 @@ export default function PRDStudio() {
       markdown: "",
       model: activeEngine,
       source: "gemini",
+      chatHistory: chatMessages,
+      chatMode: chatMode,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -406,6 +424,8 @@ export default function PRDStudio() {
     setMarkdown("");
     setStatus("idle");
     setErrorMsg("");
+    setChatMessages([]);
+    setChatMode("quick");
     setCurrentView("generator");
   }
 
@@ -565,6 +585,8 @@ export default function PRDStudio() {
         markdown: data.markdown,
         model: data.model || activeEngine,
         source: data.source || "gemini",
+        chatHistory: chatMessages,
+        chatMode: chatMode,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -601,6 +623,8 @@ export default function PRDStudio() {
       markdown,
       model: aiModel || activeEngine,
       source: aiSource || "gemini",
+      chatHistory: chatMessages,
+      chatMode: chatMode,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -1123,6 +1147,9 @@ export default function PRDStudio() {
               onClose={() => setIsChatbotOpen(false)}
               chatMode={chatMode}
               onChatModeChange={setChatMode}
+              messages={chatMessages}
+              onMessagesChange={setChatMessages}
+              projectTitle={nama || (activeProjectId ? "Draft Proyek" : undefined)}
             />
           </aside>
         )}
