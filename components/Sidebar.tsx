@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { SavedPRDProject, AIEngineOption, AI_ENGINE_OPTIONS } from "@/lib/types";
+import { SavedPRDProject, AIEngineOption, AI_ENGINE_OPTIONS, UserProfile } from "@/lib/types";
 
 interface SidebarProps {
   currentView: "dashboard" | "generator";
@@ -15,6 +15,8 @@ interface SidebarProps {
   onOpenEngineModal: () => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  currentUser: UserProfile;
+  onLogout: () => void;
 }
 
 export default function Sidebar({
@@ -29,6 +31,8 @@ export default function Sidebar({
   onOpenEngineModal,
   isCollapsed,
   onToggleCollapse,
+  currentUser,
+  onLogout,
 }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -263,38 +267,95 @@ export default function Sidebar({
       </div>
 
       {/* Sidebar Footer: AI Engine Active Pill Badge (Matches user screenshot) */}
-      <div className="p-3 border-t border-white/10 bg-slate-950/90">
-        <button
-          type="button"
-          onClick={onOpenEngineModal}
-          className={`w-full p-2 rounded-xl bg-slate-900 hover:bg-slate-800/80 border border-white/10 hover:border-brand-500/40 transition-all text-left group ${
-            isCollapsed ? "flex items-center justify-center p-2" : ""
-          }`}
-          title="Pengaturan AI Engine"
-        >
-          {isCollapsed ? (
-            <span className="h-3 w-3 rounded-full bg-emerald-400 animate-pulse" />
-          ) : (
-            <div>
-              {/* The user-requested pill badge */}
-              <div className="flex items-center justify-between mb-1.5">
-                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-950 border border-white/10 text-[11px] text-slate-300">
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+      {/* Sidebar Footer: AI Engine Active Pill Badge (Matches user screenshot) */}
+      <div className="p-3 border-t border-white/10 bg-slate-950/90 space-y-2">
+        {currentUser.plan === "pro" ? (
+          /* PRO USER (Admin): Full details, Ubah button, and model name from screenshot */
+          <button
+            type="button"
+            onClick={onOpenEngineModal}
+            className={`w-full p-2.5 rounded-xl bg-slate-900 hover:bg-slate-850 border border-white/10 hover:border-brand-500/40 transition-all text-left group ${
+              isCollapsed ? "flex items-center justify-center p-2" : ""
+            }`}
+            title="Pengaturan AI Engine (Pro Plan)"
+          >
+            {isCollapsed ? (
+              <span className="h-3 w-3 rounded-full bg-emerald-400 animate-pulse" />
+            ) : (
+              <div>
+                {/* The user-requested pill badge */}
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-950 border border-white/10 text-[11px] text-slate-300">
+                    <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="font-medium">AI Engine Active</span>
+                  </div>
+                  <span className="text-[10px] text-slate-500 group-hover:text-brand-400 transition-colors">
+                    Ubah ⚙️
+                  </span>
+                </div>
+                <div className="text-xs font-semibold text-slate-200 truncate">
+                  {activeEngineMeta.name}
+                </div>
+                <div className="text-[10px] text-slate-400 font-mono truncate">
+                  {activeEngineMeta.provider}
+                </div>
+              </div>
+            )}
+          </button>
+        ) : (
+          /* FREE USER (Member): Locked engine, ONLY AI Engine Active pill, no model text, no change button */
+          <div
+            className={`w-full p-2.5 rounded-xl bg-slate-900/80 border border-white/5 text-center ${
+              isCollapsed ? "flex items-center justify-center p-2" : ""
+            }`}
+            title="AI Engine terstandar (Paket Free)"
+          >
+            {isCollapsed ? (
+              <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+            ) : (
+              <div className="flex items-center justify-center">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-950 border border-white/10 text-[11px] text-slate-300">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400" />
                   <span className="font-medium">AI Engine Active</span>
                 </div>
-                <span className="text-[10px] text-slate-500 group-hover:text-brand-400 transition-colors">
-                  Ubah ⚙️
-                </span>
               </div>
-              <div className="text-xs font-medium text-slate-200 truncate">
-                {activeEngineMeta.name}
+            )}
+          </div>
+        )}
+
+        {/* User Account Info & Logout */}
+        {!isCollapsed && (
+          <div className="pt-2 border-t border-white/5 flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2 min-w-0 pr-2">
+              <div className="w-6 h-6 rounded-full bg-brand-500/20 text-brand-300 flex items-center justify-center text-[10px] font-bold shrink-0">
+                {currentUser.name.charAt(0).toUpperCase()}
               </div>
-              <div className="text-[10px] text-slate-400 font-mono truncate">
-                {activeEngineMeta.provider}
+              <div className="truncate">
+                <div className="font-medium text-slate-200 text-[11px] truncate flex items-center gap-1">
+                  <span>{currentUser.name}</span>
+                  {currentUser.plan === "pro" ? (
+                    <span className="text-[9px] px-1 rounded bg-amber-500/20 text-amber-300 font-mono">PRO</span>
+                  ) : (
+                    <span className="text-[9px] px-1 rounded bg-white/10 text-slate-400 font-mono">FREE</span>
+                  )}
+                </div>
               </div>
             </div>
-          )}
-        </button>
+
+            <button
+              type="button"
+              onClick={onLogout}
+              className="p-1 rounded text-slate-500 hover:text-rose-400 transition-colors"
+              title="Keluar (Logout)"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
     </aside>
   );

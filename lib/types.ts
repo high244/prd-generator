@@ -1,7 +1,20 @@
 import { FeatureItem } from "./prompt";
 
+export interface UserProfile {
+  id: string;
+  email: string;
+  name: string;
+  username?: string;
+  phone?: string;
+  organization?: string;
+  role: "admin" | "member";
+  plan: "pro" | "free";
+  createdAt?: string;
+}
+
 export interface SavedPRDProject {
   id: string;
+  userId?: string; // Isolasi riwayat per akun
   nama: string;
   ide: string;
   category: string;

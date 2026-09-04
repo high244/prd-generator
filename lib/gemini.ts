@@ -61,7 +61,7 @@ export async function generateWithGemini(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(8000),
+        signal: AbortSignal.timeout(60000), // 60 detik agar output PRD panjang & kompleks tidak terputus timeout
       });
 
       const data = await res.json();

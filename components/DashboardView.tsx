@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { SavedPRDProject, AIEngineOption, AI_ENGINE_OPTIONS } from "@/lib/types";
+import { SavedPRDProject, AIEngineOption, AI_ENGINE_OPTIONS, UserProfile } from "@/lib/types";
 
 interface PresetConcept {
   name: string;
@@ -23,6 +23,7 @@ interface DashboardViewProps {
   onDeleteProject: (id: string, e: React.MouseEvent) => void;
   onApplyPreset: (preset: PresetConcept) => void;
   presets: PresetConcept[];
+  currentUser: UserProfile;
 }
 
 export default function DashboardView({
@@ -35,6 +36,7 @@ export default function DashboardView({
   onDeleteProject,
   onApplyPreset,
   presets,
+  currentUser,
 }: DashboardViewProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -121,72 +123,108 @@ export default function DashboardView({
         </div>
       </div>
 
-      {/* AI ENGINE CONFIGURATION CARD (Highlight User Requirement) */}
-      <div className="glass-panel rounded-2xl p-6 border border-white/10 shadow-xl space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
-          <div>
-            <div className="flex items-center gap-2.5">
-              {/* User requested Pill Badge */}
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-white/10 text-xs text-slate-200">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="font-semibold">AI Engine Active</span>
+      {/* AI ENGINE CONFIGURATION CARD (Pro vs Free) */}
+      {currentUser.plan === "pro" ? (
+        /* PRO TIER (Admin): Full model selector, Ubah button, and custom engines */
+        <div className="glass-panel rounded-2xl p-6 border border-white/10 shadow-xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+            <div>
+              <div className="flex items-center gap-2.5">
+                {/* User requested Pill Badge */}
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-white/10 text-xs text-slate-200">
+                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="font-semibold">AI Engine Active</span>
+                </div>
+                <span className="text-xs font-mono text-brand-300">
+                  {activeEngineMeta.provider}
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  👑 Pro Feature
+                </span>
               </div>
-              <span className="text-xs font-mono text-brand-300">
-                {activeEngineMeta.provider}
-              </span>
+              <h2 className="font-display font-semibold text-lg text-white mt-2">
+                Pengaturan AI Engine yang Sedang Dipakai
+              </h2>
+              <p className="text-xs text-slate-400">
+                Pilih model AI sebelum masuk ke halaman pembuatan PRD. Dokumen dan fitur akan diproses dengan model ini.
+              </p>
             </div>
-            <h2 className="font-display font-semibold text-lg text-white mt-2">
-              Pengaturan AI Engine yang Sedang Dipakai
-            </h2>
-            <p className="text-xs text-slate-400">
-              Pilih model AI sebelum masuk ke halaman pembuatan PRD. Dokumen dan fitur akan diproses dengan model ini.
-            </p>
+
+            <button
+              type="button"
+              onClick={onOpenEngineModal}
+              className="self-start sm:self-auto px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-medium border border-white/10 transition-all flex items-center gap-2"
+            >
+              <span>⚙️ Pengaturan Engine Lengkap</span>
+            </button>
           </div>
 
-          <button
-            type="button"
-            onClick={onOpenEngineModal}
-            className="self-start sm:self-auto px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-medium border border-white/10 transition-all flex items-center gap-2"
-          >
-            <span>⚙️ Pengaturan Engine Lengkap</span>
-          </button>
+          {/* Quick Engine Selector Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+            {AI_ENGINE_OPTIONS.filter((e) => e.id !== "fallback").map((engine) => {
+              const isSelected = activeEngine === engine.id;
+              return (
+                <div
+                  key={engine.id}
+                  onClick={() => onSelectEngine(engine.id)}
+                  className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
+                    isSelected
+                      ? "bg-brand-500/15 border-brand-500 shadow-glow"
+                      : "bg-slate-900/60 border-white/5 hover:border-white/15 hover:bg-slate-900"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="font-semibold text-xs text-white">
+                      {engine.name}
+                    </span>
+                    {isSelected ? (
+                      <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                    ) : (
+                      <span className="text-[10px] text-slate-500">Pilih</span>
+                    )}
+                  </div>
+                  <div className="text-[10px] font-mono text-brand-300 mb-1">
+                    {engine.badge}
+                  </div>
+                  <p className="text-[11px] text-slate-400 line-clamp-2">
+                    {engine.description}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
         </div>
-
-        {/* Quick Engine Selector Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
-          {AI_ENGINE_OPTIONS.filter((e) => e.id !== "fallback").map((engine) => {
-            const isSelected = activeEngine === engine.id;
-            return (
-              <div
-                key={engine.id}
-                onClick={() => onSelectEngine(engine.id)}
-                className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
-                  isSelected
-                    ? "bg-brand-500/15 border-brand-500 shadow-glow"
-                    : "bg-slate-900/60 border-white/5 hover:border-white/15 hover:bg-slate-900"
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="font-semibold text-xs text-white">
-                    {engine.name}
-                  </span>
-                  {isSelected ? (
-                    <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                  ) : (
-                    <span className="text-[10px] text-slate-500">Pilih</span>
-                  )}
+      ) : (
+        /* FREE TIER (Member): Locked engine, only AI Engine Active badge, no model switcher */
+        <div className="glass-panel rounded-2xl p-6 border border-white/10 shadow-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2.5">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-white/10 text-xs text-slate-200">
+                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="font-semibold">AI Engine Active</span>
                 </div>
-                <div className="text-[10px] font-mono text-brand-300 mb-1">
-                  {engine.badge}
-                </div>
-                <p className="text-[11px] text-slate-400 line-clamp-2">
-                  {engine.description}
-                </p>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/5 text-slate-400 border border-white/5">
+                  Paket Free (Standar)
+                </span>
               </div>
-            );
-          })}
+              <h2 className="font-display font-semibold text-base text-white">
+                AI Engine Aktif & Teroptimasi
+              </h2>
+              <p className="text-xs text-slate-400 max-w-xl">
+                Sistem secara otomatis mengelola performa AI untuk akun Anda. Kustomisasi pergantian model AI (Gemini 3.8 Flash, Claude 3.5 Sonnet) dikhususkan untuk akun <strong>Pro Tier (Admin)</strong>.
+              </p>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-900/80 border border-white/5 text-center shrink-0">
+              <div className="text-[11px] text-slate-400 mb-1">Status Akun:</div>
+              <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                ⚡ Free Member Aktif
+              </span>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Quick Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -201,7 +239,7 @@ export default function DashboardView({
             <div className="text-2xl font-bold font-display text-white">
               {savedProjects.length}
             </div>
-            <div className="text-xs text-slate-400">Total Proyek PRD Tersimpan</div>
+            <div className="text-xs text-slate-400">Proyek Akun Anda ({currentUser.plan.toUpperCase()})</div>
           </div>
         </div>
 
@@ -230,11 +268,11 @@ export default function DashboardView({
           </div>
           <div>
             <div className="text-sm font-semibold text-white">
-              {activeEngineMeta.name}
+              {currentUser.plan === "pro" ? activeEngineMeta.name : "AI Engine Active"}
             </div>
             <div className="text-xs text-emerald-400 flex items-center gap-1.5 mt-0.5">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Engine Aktif & Siap</span>
+              <span>{currentUser.plan === "pro" ? "Kustomisasi Pro Aktif" : "Engine Standar Aktif"}</span>
             </div>
           </div>
         </div>

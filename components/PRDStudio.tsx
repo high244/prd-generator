@@ -6,11 +6,17 @@ import DashboardView from "./DashboardView";
 import PRDViewer from "./PRDViewer";
 import AIEngineModal from "./AIEngineModal";
 import AIChatbotAssistant, { ExtractedPRDData } from "./AIChatbotAssistant";
+import AuthGate from "./AuthGate";
 import {
   SavedPRDProject,
   AIEngineOption,
   AI_ENGINE_OPTIONS,
+  UserProfile,
 } from "@/lib/types";
+import {
+  getCurrentUserSession,
+  logoutUserSession,
+} from "@/lib/supabase";
 import {
   loadSavedProjects,
   saveProject,
@@ -87,6 +93,10 @@ const TECH_STACK_PRESETS = [
 ];
 
 export default function PRDStudio() {
+  // Auth Session State
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
+
   // Navigation & View State
   const [currentView, setCurrentView] = useState<"dashboard" | "generator">("dashboard");
   const [inputMode, setInputMode] = useState<"chat" | "form">("chat");
@@ -120,12 +130,22 @@ export default function PRDStudio() {
   const [aiModel, setAiModel] = useState<string>("");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Initialize from LocalStorage
+  // Initialize Auth & Storage
   useEffect(() => {
-    const projects = loadSavedProjects();
-    setSavedProjects(projects);
+    const sessionUser = getCurrentUserSession();
+    if (sessionUser) {
+      setCurrentUser(sessionUser);
+      const projects = loadSavedProjects(sessionUser.id);
+      setSavedProjects(projects);
+      if (sessionUser.plan === "free") {
+        setActiveEngine("gemini-3.6-flash");
+      }
+    }
     const engine = loadActiveEngine();
-    setActiveEngine(engine);
+    if (!sessionUser || sessionUser.plan === "pro") {
+      setActiveEngine(engine);
+    }
+    setIsAuthChecking(false);
   }, []);
 
   function showToast(msg: string) {
@@ -133,8 +153,31 @@ export default function PRDStudio() {
     setTimeout(() => setToastMessage(null), 3200);
   }
 
-  // Engine Change
+  // Auth Handlers
+  function handleLoginSuccess(user: UserProfile) {
+    setCurrentUser(user);
+    const projects = loadSavedProjects(user.id);
+    setSavedProjects(projects);
+    if (user.plan === "free") {
+      setActiveEngine("gemini-3.6-flash");
+    }
+    showToast(`Selamat datang, ${user.name}! (${user.plan === "pro" ? "👑 Pro Tier" : "⚡ Free Tier"})`);
+  }
+
+  function handleLogout() {
+    logoutUserSession();
+    setCurrentUser(null);
+    setActiveProjectId(null);
+    setMarkdown("");
+    showToast("Anda telah berhasil keluar dari akun.");
+  }
+
+  // Engine Change (Protected for Pro only)
   function handleSelectEngine(engine: AIEngineOption) {
+    if (currentUser?.plan !== "pro") {
+      showToast("Kustomisasi model AI hanya tersedia untuk akun Pro (Admin).");
+      return;
+    }
     setActiveEngine(engine);
     saveActiveEngine(engine);
     const meta = AI_ENGINE_OPTIONS.find((e) => e.id === engine);
@@ -193,7 +236,7 @@ export default function PRDStudio() {
   function handleDeleteProject(id: string, e: React.MouseEvent) {
     e.stopPropagation();
     if (confirm("Hapus dokumen PRD ini dari riwayat tersimpan?")) {
-      const updated = deleteProject(id);
+      const updated = deleteProject(id, currentUser?.id);
       setSavedProjects(updated);
       if (activeProjectId === id) {
         handleNewProject("chat");
@@ -332,6 +375,7 @@ export default function PRDStudio() {
       const newProjectId = activeProjectId || `prd-${Date.now()}`;
       const projectToSave: SavedPRDProject = {
         id: newProjectId,
+        userId: currentUser?.id,
         nama,
         ide,
         category,
@@ -346,7 +390,7 @@ export default function PRDStudio() {
         updatedAt: new Date().toISOString(),
       };
 
-      const updated = saveProject(projectToSave);
+      const updated = saveProject(projectToSave, currentUser?.id);
       setSavedProjects(updated);
       setActiveProjectId(newProjectId);
 
@@ -367,6 +411,7 @@ export default function PRDStudio() {
     const idToSave = activeProjectId || `prd-${Date.now()}`;
     const projectToSave: SavedPRDProject = {
       id: idToSave,
+      userId: currentUser?.id,
       nama: nama || "Proyek Tanpa Judul",
       ide,
       category,
@@ -381,7 +426,7 @@ export default function PRDStudio() {
       updatedAt: new Date().toISOString(),
     };
 
-    const updated = saveProject(projectToSave);
+    const updated = saveProject(projectToSave, currentUser?.id);
     setSavedProjects(updated);
     setActiveProjectId(idToSave);
     showToast("Dokumen PRD berhasil disimpan ke riwayat!");
@@ -394,6 +439,23 @@ export default function PRDStudio() {
     if (priorityFilter === "ALL") return true;
     return f.priority === priorityFilter;
   });
+
+  // Show loading spinner while authenticating
+  if (isAuthChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 rounded-full border-4 border-t-brand-500 border-r-transparent border-b-brand-accent border-l-transparent animate-spin" />
+          <span className="text-xs text-slate-400 font-mono">Memeriksa otentikasi...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Not logged in -> Show Supabase Auth Gate
+  if (!currentUser) {
+    return <AuthGate onLoginSuccess={handleLoginSuccess} />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-ambient-pattern">
@@ -434,7 +496,7 @@ export default function PRDStudio() {
             </div>
           </div>
 
-          {/* Right Header Navigation & Active Engine Badge */}
+          {/* Right Header Navigation, Active Engine Badge & User Profile */}
           <div className="flex items-center gap-3">
             {/* View switcher buttons */}
             <div className="flex items-center p-1 bg-slate-900/90 rounded-xl border border-white/5 text-xs">
@@ -462,19 +524,67 @@ export default function PRDStudio() {
               </button>
             </div>
 
-            {/* AI Engine Active Pill Badge (Matches user screenshot) */}
-            <button
-              type="button"
-              onClick={() => setIsEngineModalOpen(true)}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 hover:bg-slate-800 border border-white/10 text-xs text-slate-200 transition-all group"
-              title="Klik untuk mengubah AI Engine"
-            >
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="font-medium">AI Engine Active</span>
-              <span className="text-[10px] text-slate-500 group-hover:text-brand-300 hidden md:inline">
-                ({activeEngineMeta.name})
-              </span>
-            </button>
+            {/* AI Engine Active Pill Badge (Pro shows Ubah & model name, Free only shows AI Engine Active) */}
+            {currentUser.plan === "pro" ? (
+              <button
+                type="button"
+                onClick={() => setIsEngineModalOpen(true)}
+                className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 hover:bg-slate-800 border border-white/10 text-xs text-slate-200 transition-all group"
+                title="Klik untuk mengubah AI Engine (Akun Pro)"
+              >
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="font-medium">AI Engine Active</span>
+                <span className="text-[10px] text-slate-500 group-hover:text-brand-300 hidden md:inline">
+                  ({activeEngineMeta.name})
+                </span>
+              </button>
+            ) : (
+              <div
+                className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 border border-white/10 text-xs text-slate-300"
+                title="AI Engine Aktif & Terstandarisasi"
+              >
+                <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                <span className="font-medium">AI Engine Active</span>
+              </div>
+            )}
+
+            {/* User Profile Chip & Logout */}
+            <div className="flex items-center gap-2 pl-2 border-l border-white/10">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-brand-500 to-brand-accent flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                  {currentUser.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="hidden lg:block text-left">
+                  <div className="text-xs font-semibold text-white leading-tight flex items-center gap-1.5">
+                    <span>{currentUser.name}</span>
+                    {currentUser.plan === "pro" ? (
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-mono border border-amber-500/30">
+                        👑 PRO
+                      </span>
+                    ) : (
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 font-mono border border-white/10">
+                        ⚡ FREE
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-mono leading-tight">
+                    {currentUser.email}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors ml-1"
+                title="Keluar (Logout)"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -494,6 +604,8 @@ export default function PRDStudio() {
           onOpenEngineModal={() => setIsEngineModalOpen(true)}
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          currentUser={currentUser}
+          onLogout={handleLogout}
         />
 
         {/* Main Content Area */}
@@ -511,6 +623,7 @@ export default function PRDStudio() {
                 onDeleteProject={handleDeleteProject}
                 onApplyPreset={handleApplyPreset}
                 presets={PRESET_TEMPLATES}
+                currentUser={currentUser}
               />
             )}
 
@@ -535,9 +648,15 @@ export default function PRDStudio() {
 
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-slate-400">Engine Aktif:</span>
-                    <span className="px-2 py-0.5 rounded-full text-[11px] font-mono bg-brand-500/10 text-brand-300 border border-brand-500/20">
-                      {activeEngineMeta.name}
-                    </span>
+                    {currentUser.plan === "pro" ? (
+                      <span className="px-2 py-0.5 rounded-full text-[11px] font-mono bg-brand-500/10 text-brand-300 border border-brand-500/20">
+                        {activeEngineMeta.name}
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full text-[11px] font-mono bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                        AI Engine Active
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -841,7 +960,7 @@ export default function PRDStudio() {
                       <div className="glass-panel rounded-2xl border border-white/10 p-10 min-h-[560px] flex flex-col items-center justify-center text-center max-w-md mx-auto">
                         <div className="w-16 h-16 rounded-full border-4 border-t-brand-500 border-r-transparent border-b-brand-accent border-l-transparent animate-spin mb-6" />
                         <h4 className="font-display font-medium text-base text-white mb-2">
-                          Menyusun PRD dengan {activeEngineMeta.name}...
+                          Menyusun PRD dengan {currentUser.plan === "pro" ? activeEngineMeta.name : "AI Engine"}...
                         </h4>
                         <p className="text-xs text-slate-400">
                           Memetakan user stories, skema tabel database, tabel acceptance criteria, dan instruksi prompt Cursor / Claude Code.
