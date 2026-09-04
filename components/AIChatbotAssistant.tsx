@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import ReactMarkdown from "react-markdown";
 import type { FeatureItem } from "@/lib/prompt";
 import type { AIEngineOption, SavedChatMessage } from "@/lib/types";
 
@@ -85,8 +86,8 @@ export default function AIChatbotAssistant({
     id: "msg-welcome",
     role: "assistant",
     content: currentMode === "discovery"
-      ? "Halo! Saya adalah **AI Product Discovery Partner** Anda. 🔍\n\nDi mode ini, saya akan menggali ide produk Anda secara mendalam melalui wawancara terstruktur — bukan sekadar mengekstrak informasi.\n\nSaya akan menantang asumsi, memvalidasi kebutuhan pasar, dan membantu Anda menemukan **MVP yang paling tajam** sebelum menghasilkan spesifikasi PRD.\n\nCeritakan ide produk Anda, dan mari kita mulai menggali bersama! 🚀"
-      : "Halo! Saya adalah **AI Product Consultant** Anda. 🚀\n\nCeritakan apa yang diinginkan oleh Anda atau klien Anda dengan bahasa santai. Anda juga bisa langsung menempelkan (paste) catatan brief atau obrolan chat klien.\n\nSaya akan langsung membedah ide tersebut menjadi **Nama Aplikasi, Problem Statement, Target Pengguna, Rekomendasi Tech Stack, serta Daftar Fitur Prioritas (P0/P1/P2)** yang langsung siap dimasukkan ke formulir PRD!",
+      ? "Halo! Saya **AI Product Co-Pilot** Anda. 👋✨\n\nDi sini kita bisa ngobrol santai untuk mematangkan ide aplikasi atau website Anda langkah demi langkah.\n\nTenang saja, saya akan selalu bantu memberi **pilihan jawaban & saran terbaik** di setiap langkahnya. Anda juga bisa langsung memilih opsi yang saya sediakan!\n\nYuk, ceritakan ide apa yang sedang ingin Anda bangun? 🚀"
+      : "Halo! Saya **AI Product Co-Pilot** Anda. 🚀✨\n\nCeritakan ide aplikasi atau website yang Anda inginkan dengan bahasa santai sehari-hari (atau tempelkan catatan brief klien).\n\nSaya akan langsung membedah ide tersebut menjadi **Nama Aplikasi, Target Pengguna, Rekomendasi Teknologi, serta Daftar Fitur Siap Pakai** yang langsung bisa dimasukkan ke formulir PRD!",
     timestamp: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
   }), []);
 
@@ -226,7 +227,26 @@ export default function AIChatbotAssistant({
   }
 
   function handleFinishDiscovery() {
-    handleSendMessage("Saya rasa sudah cukup. Tolong rangkum premis dan generate data PRD berdasarkan hasil discovery kita.");
+    handleSendMessage("Saya rasa sudah cukup jelas. Tolong langsung rangkumkan premis dan buatkan data PRD lengkapnya sekarang ya!");
+  }
+
+  function extractQuickOptions(content?: string): string[] {
+    if (!content) return [];
+    const lines = content.split("\n");
+    const options: string[] = [];
+    for (const line of lines) {
+      const trimmed = line.trim();
+      const match = trimmed.match(/^(?:👉\s*)?(?:\*\*)?([A-D])\.(?:\*\*)?\s*(.+)$/i);
+      if (match) {
+        const letter = match[1].toUpperCase();
+        let text = match[2].replace(/\*\*/g, "").replace(/\*/g, "").trim();
+        if (text.length > 75) text = text.slice(0, 72) + "...";
+        if (text.length > 2) {
+          options.push(`${letter}. ${text}`);
+        }
+      }
+    }
+    return options.slice(0, 4);
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -238,6 +258,10 @@ export default function AIChatbotAssistant({
 
   const starterPrompts = mode === "discovery" ? DISCOVERY_STARTER_PROMPTS : QUICK_STARTER_PROMPTS;
   const discoveredCount = discoveredDimensions.size;
+
+  const lastAssistantMessage = [...messages].reverse().find((m) => m.role === "assistant");
+  const quickOptions = extractQuickOptions(lastAssistantMessage?.content);
+  const hasExtractedCard = messages.some((m) => Boolean(m.extracted));
 
   return (
     <div className="flex flex-col h-full w-full bg-slate-950/95 overflow-hidden select-none">
@@ -420,13 +444,29 @@ export default function AIChatbotAssistant({
                 <div
                   className={`p-4 rounded-2xl text-xs sm:text-sm leading-relaxed ${
                     isUser
-                      ? "bg-brand-600 text-white rounded-tr-none shadow-md"
+                      ? "bg-brand-600 text-white rounded-tr-none shadow-md whitespace-pre-wrap"
                       : mode === "discovery"
                         ? "bg-slate-900/90 border border-amber-500/15 text-slate-200 rounded-tl-none shadow-sm"
                         : "bg-slate-900/90 border border-white/10 text-slate-200 rounded-tl-none shadow-sm"
                   }`}
                 >
-                  <div className="whitespace-pre-wrap">{m.content}</div>
+                  {isUser ? (
+                    <div>{m.content}</div>
+                  ) : (
+                    <div className="space-y-2 text-slate-200 leading-relaxed">
+                      <ReactMarkdown
+                        components={{
+                          p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>,
+                          strong: ({ children }) => <strong className="font-semibold text-amber-300">{children}</strong>,
+                          ul: ({ children }) => <ul className="list-disc pl-4 space-y-1 mb-2">{children}</ul>,
+                          ol: ({ children }) => <ol className="list-decimal pl-4 space-y-1 mb-2">{children}</ol>,
+                          li: ({ children }) => <li className="leading-snug">{children}</li>,
+                        }}
+                      >
+                        {m.content}
+                      </ReactMarkdown>
+                    </div>
+                  )}
                   <div
                     className={`text-[10px] mt-1.5 ${
                       isUser ? "text-indigo-200 text-right" : "text-slate-500"
@@ -601,16 +641,47 @@ export default function AIChatbotAssistant({
         </div>
       )}
 
-      {/* Finish Discovery Button (only in discovery mode after some conversation) */}
-      {mode === "discovery" && messages.length >= 6 && !messages.some(m => m.extracted) && !isLoading && (
-        <div className="px-4 py-2 bg-gradient-to-r from-amber-950/20 to-orange-950/20 border-t border-amber-500/10 shrink-0">
+      {/* Quick Reply Options from AI (1-Click to Respond) */}
+      {quickOptions.length > 0 && !isLoading && !hasExtractedCard && (
+        <div className="p-3 bg-slate-950/90 border-t border-amber-500/15 space-y-2 shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-400">
+              <span>💡</span>
+              <span>Pilihan Cepat (Klik untuk langsung jawab):</span>
+            </div>
+            <span className="text-[10px] text-slate-400 font-mono">1-Klik</span>
+          </div>
+          <div className="grid grid-cols-1 gap-1.5">
+            {quickOptions.map((opt, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => handleSendMessage(opt)}
+                className="text-left text-xs px-3 py-2 rounded-xl bg-slate-900 hover:bg-amber-500/20 text-slate-200 hover:text-white border border-white/10 hover:border-amber-500/30 transition-all flex items-center justify-between group shadow-sm"
+              >
+                <span className="font-medium leading-snug">{opt}</span>
+                <span className="text-[10px] text-amber-400/70 group-hover:text-amber-300 shrink-0 ml-2">
+                  Pilih ↵
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Shortcut button: Langsung Buat PRD */}
+      {messages.length >= 2 && !hasExtractedCard && !isLoading && (
+        <div className="px-3 py-2 bg-slate-950/80 border-t border-white/5 flex items-center justify-between shrink-0">
+          <span className="text-[10px] text-slate-400">
+            Sudah cukup jelas konsepnya?
+          </span>
           <button
             type="button"
-            onClick={handleFinishDiscovery}
-            className="w-full py-2 px-3 rounded-lg bg-gradient-to-r from-amber-500/90 to-orange-600/90 hover:from-amber-500 hover:to-orange-500 text-white font-medium text-xs shadow-glow transition-all flex items-center justify-center gap-2"
+            onClick={() => handleSendMessage("Saya rasa sudah cukup jelas. Tolong langsung rangkumkan dan buatkan spesifikasi PRD lengkap sekarang ya!")}
+            className="text-[11px] font-medium text-amber-300 hover:text-white bg-amber-500/15 hover:bg-amber-500/30 border border-amber-500/30 rounded-lg px-2.5 py-1 transition-all flex items-center gap-1.5 shadow-sm"
+            title="Langsung buatkan dokumen PRD dari hasil obrolan"
           >
-            <span>✅</span>
-            <span>Selesai Discovery — Generate PRD Data</span>
+            <span>⚡ Langsung Buat Dokumen PRD</span>
           </button>
         </div>
       )}
@@ -626,8 +697,8 @@ export default function AIChatbotAssistant({
               onKeyDown={handleKeyDown}
               placeholder={
                 mode === "discovery"
-                  ? "Ceritakan ide produk Anda... saya akan menggali lebih dalam. (Enter untuk kirim)"
-                  : "Ketik apa yang diinginkan oleh user / klien Anda di sini... (Enter untuk kirim)"
+                  ? "Ketik jawabanmu, pilih opsi di atas, atau ketik 'Buat PRD'..."
+                  : "Ceritakan ide aplikasi atau kebutuhanmu di sini... (Enter untuk kirim)"
               }
               className={`w-full p-3 rounded-xl bg-slate-950 border text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none resize-none leading-relaxed ${
                 mode === "discovery"
