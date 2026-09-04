@@ -24,8 +24,8 @@ interface ChatMessage {
 
 interface AIChatbotAssistantProps {
   activeEngine: AIEngineOption;
-  onApplyToForm: (data: ExtractedPRDData) => void;
-  onSwitchToManualForm: () => void;
+  onApplyToForm?: (data: ExtractedPRDData) => void;
+  onClose?: () => void;
 }
 
 const QUICK_STARTER_PROMPTS = [
@@ -38,7 +38,7 @@ const QUICK_STARTER_PROMPTS = [
 export default function AIChatbotAssistant({
   activeEngine,
   onApplyToForm,
-  onSwitchToManualForm,
+  onClose,
 }: AIChatbotAssistantProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -124,39 +124,66 @@ export default function AIChatbotAssistant({
   }
 
   return (
-    <div className="glass-panel rounded-2xl border border-white/10 shadow-2xl flex flex-col h-[720px] overflow-hidden">
-      {/* Chat Header */}
-      <div className="p-4 sm:px-6 bg-slate-900/90 border-b border-white/10 flex items-center justify-between gap-3 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-brand-accent flex items-center justify-center text-white shadow-glow">
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+    <div className="flex flex-col h-full w-full bg-slate-950/95 overflow-hidden select-none">
+      {/* Chat Taskbar Header */}
+      <div className="p-3.5 sm:px-4 bg-slate-950 border-b border-white/10 flex items-center justify-between gap-3 shrink-0">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 to-brand-accent flex items-center justify-center text-white shadow-glow shrink-0">
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-display font-semibold text-sm text-white">
-                Asisten Obrolan PRD (AI Co-Pilot)
+          <div className="truncate">
+            <div className="flex items-center gap-1.5">
+              <h3 className="font-display font-bold text-xs text-white truncate">
+                Chatbot Co-Pilot
               </h3>
-              <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
             </div>
-            <p className="text-[11px] text-slate-400">
-              Ceritakan ide secara bebas, AI akan mengekstraknya ke formulir PRD
+            <p className="text-[10px] text-slate-400 truncate">
+              Konsultasi Produk & Arsitektur
             </p>
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={onSwitchToManualForm}
-          className="text-xs text-brand-400 hover:text-brand-300 transition-colors flex items-center gap-1"
-          title="Buka Formulir Input Langsung"
-        >
-          <span>Form Manual</span>
-          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
-        </button>
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              setMessages([
+                {
+                  id: "msg-welcome",
+                  role: "assistant",
+                  content:
+                    "Halo! Saya adalah **AI Product Consultant** Anda. 🚀\n\nCeritakan apa yang diinginkan oleh Anda atau klien Anda dengan bahasa santai. Anda juga bisa konsultasi mengenai ide, arsitektur, atau fitur produk software.\n\nSaya siap membantu kapan saja!",
+                  timestamp: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
+                },
+              ]);
+            }}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900 transition-colors"
+            title="Reset Obrolan"
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+              <path d="M21 3v5h-5" />
+              <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+              <path d="M3 21v-5h5" />
+            </svg>
+          </button>
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-900 transition-colors"
+              title="Tutup Taskbar Chatbot"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Messages Scroll Area */}
@@ -265,16 +292,18 @@ export default function AIChatbotAssistant({
                     )}
 
                     {/* CTA to Apply Extracted Data into Form */}
-                    <button
-                      type="button"
-                      onClick={() => onApplyToForm(m.extracted!)}
-                      className="w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-brand-500 via-indigo-600 to-brand-accent hover:from-brand-600 hover:to-indigo-500 text-white font-medium text-xs shadow-glow transition-all flex items-center justify-center gap-2"
-                    >
-                      <span>✨ Masukkan ke Form & Buka Editor</span>
-                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                        <polyline points="9 18 15 12 9 6" />
-                      </svg>
-                    </button>
+                    {onApplyToForm && (
+                      <button
+                        type="button"
+                        onClick={() => onApplyToForm(m.extracted!)}
+                        className="w-full py-2 px-3 rounded-lg bg-gradient-to-r from-brand-500 via-indigo-600 to-brand-accent hover:from-brand-600 hover:to-indigo-500 text-white font-medium text-xs shadow-glow transition-all flex items-center justify-center gap-2"
+                      >
+                        <span>✨ Masukkan ke Workspace PRD</span>
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                          <polyline points="9 18 15 12 9 6" />
+                        </svg>
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

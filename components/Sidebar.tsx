@@ -62,7 +62,7 @@ export default function Sidebar({
     <aside
       className={`relative border-r border-white/10 bg-slate-950/95 backdrop-blur-xl flex flex-col transition-all duration-300 z-40 ${
         isCollapsed ? "w-16" : "w-72 sm:w-80"
-      } shrink-0 min-h-[calc(100vh-4rem)] select-none`}
+      } shrink-0 h-full max-h-full overflow-hidden select-none`}
     >
       {/* Sidebar Header */}
       <div className="p-3.5 border-b border-white/10 flex items-center justify-between gap-2">
@@ -157,20 +157,6 @@ export default function Sidebar({
           </svg>
           {!isCollapsed && <span>Workspace PRD</span>}
         </button>
-
-        <button
-          type="button"
-          onClick={() => onNewProject()}
-          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-indigo-300 hover:bg-slate-900/60 transition-all ${
-            isCollapsed ? "justify-center px-0" : ""
-          }`}
-          title="Mulai dengan Chatbot AI"
-        >
-          <svg className="w-4 h-4 shrink-0 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-          {!isCollapsed && <span>Chatbot Co-Pilot</span>}
-        </button>
       </div>
 
       {/* Search Bar (if expanded) */}
@@ -199,7 +185,7 @@ export default function Sidebar({
       )}
 
       {/* Saved PRDs History Section */}
-      <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
+      <div className="flex-1 min-h-0 overflow-y-auto px-3 py-2 space-y-1">
         {!isCollapsed && (
           <div className="flex items-center justify-between px-2 pt-2 pb-1 text-[11px] font-mono uppercase tracking-wider text-slate-500">
             <span>Riwayat Proyek ({filteredProjects.length})</span>
@@ -267,8 +253,7 @@ export default function Sidebar({
       </div>
 
       {/* Sidebar Footer: AI Engine Active Pill Badge (Matches user screenshot) */}
-      {/* Sidebar Footer: AI Engine Active Pill Badge (Matches user screenshot) */}
-      <div className="p-3 border-t border-white/10 bg-slate-950/90 space-y-2">
+      <div className="shrink-0 mt-auto p-3 border-t border-white/10 bg-slate-950/90 space-y-2">
         {currentUser.plan === "pro" ? (
           /* PRO USER (Admin): Full details, Ubah button, and model name from screenshot */
           <button

@@ -420,17 +420,23 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
               </div>
             </div>
 
-            {/* Organisasi / Perusahaan */}
+            {/* Organisasi / Perusahaan (Dinonaktifkan) */}
             <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1">
-                Perusahaan / Startup / Instansi
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                  Perusahaan / Startup / Instansi
+                </label>
+                <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-800/80 text-slate-400 font-mono border border-white/5">
+                  Dinonaktifkan
+                </span>
+              </div>
               <input
                 type="text"
-                value={regOrganization}
-                onChange={(e) => setRegOrganization(e.target.value)}
-                placeholder="Contoh: PT Teknologi Bangsa / Mandiri"
-                className="input-glass w-full px-3 py-2 rounded-xl text-xs text-white placeholder-slate-500"
+                disabled
+                value=""
+                readOnly
+                placeholder="Contoh: PT Teknologi Bangsa / Mandiri (Nonaktif)"
+                className="input-glass w-full px-3 py-2 rounded-xl text-xs text-slate-500 placeholder-slate-600 bg-slate-900/40 cursor-not-allowed border-white/5 select-none"
               />
             </div>
 
