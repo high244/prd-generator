@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -39,6 +40,7 @@ export default function RootLayout({
     >
       <body className="bg-ambient-pattern min-h-screen text-slate-100 antialiased selection:bg-brand-500/30 selection:text-white">
         {children}
+        <Analytics />
       </body>
     </html>
   );
