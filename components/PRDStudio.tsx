@@ -5,6 +5,7 @@ import Sidebar from "./Sidebar";
 import DashboardView from "./DashboardView";
 import PRDViewer from "./PRDViewer";
 import AIEngineModal from "./AIEngineModal";
+import AIChatbotAssistant, { ExtractedPRDData } from "./AIChatbotAssistant";
 import {
   SavedPRDProject,
   AIEngineOption,
@@ -88,6 +89,7 @@ const TECH_STACK_PRESETS = [
 export default function PRDStudio() {
   // Navigation & View State
   const [currentView, setCurrentView] = useState<"dashboard" | "generator">("dashboard");
+  const [inputMode, setInputMode] = useState<"chat" | "form">("chat");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isEngineModalOpen, setIsEngineModalOpen] = useState(false);
 
@@ -153,11 +155,25 @@ export default function PRDStudio() {
     setAiSource(project.source || "gemini");
     setAiModel(project.model || "");
     setStatus("success");
+    setInputMode("form");
     setCurrentView("generator");
   }
 
+  // Apply extracted data from AI Chatbot into Form
+  function handleApplyFromChat(data: ExtractedPRDData) {
+    setNama(data.nama);
+    setIde(data.ide);
+    setCategory(data.category || "general");
+    setTarget(data.target || "");
+    setStack(data.stack || TECH_STACK_PRESETS[0]);
+    setTimeline(data.timeline || "2-4 Minggu (Fokus MVP)");
+    setFeatures(data.features || []);
+    setInputMode("form");
+    showToast("Data dari Chatbot berhasil dimasukkan ke formulir PRD!");
+  }
+
   // Reset to create new project
-  function handleNewProject() {
+  function handleNewProject(mode: "chat" | "form" = "chat") {
     setActiveProjectId(null);
     setNama("");
     setIde("");
@@ -169,6 +185,7 @@ export default function PRDStudio() {
     setMarkdown("");
     setStatus("idle");
     setErrorMsg("");
+    setInputMode(mode);
     setCurrentView("generator");
   }
 
@@ -179,7 +196,7 @@ export default function PRDStudio() {
       const updated = deleteProject(id);
       setSavedProjects(updated);
       if (activeProjectId === id) {
-        handleNewProject();
+        handleNewProject("chat");
       }
       showToast("Dokumen PRD berhasil dihapus.");
     }
@@ -195,6 +212,7 @@ export default function PRDStudio() {
     setStack(preset.stack);
     setMarkdown("");
     setStatus("idle");
+    setInputMode("form");
     setCurrentView("generator");
     triggerFeatureBrainstorm(preset.nama, preset.ide, preset.category);
   }
@@ -526,19 +544,53 @@ export default function PRDStudio() {
                 {/* Main 2-Column Grid */}
                 <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
                   {/* Left Column: Input Form & Feature Discovery (5 Cols) */}
-                  <section className="xl:col-span-5 space-y-6">
-                    <div className="glass-panel rounded-2xl p-6 border border-white/10 shadow-xl space-y-5">
-                      <div className="border-b border-white/10 pb-4">
-                        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-400 text-xs font-mono border border-indigo-500/20 mb-2">
-                          Tahap 1 • Konsep & Ide Dasar
+                  <section className="xl:col-span-5 space-y-4">
+                    {/* Mode Switcher: Chatbot vs Manual Form */}
+                    <div className="flex items-center gap-1.5 p-1 bg-slate-900/90 rounded-xl border border-white/10 text-xs w-full">
+                      <button
+                        type="button"
+                        onClick={() => setInputMode("chat")}
+                        className={`flex-1 py-2 px-3 rounded-lg font-medium transition-all flex items-center justify-center gap-1.5 ${
+                          inputMode === "chat"
+                            ? "bg-brand-500 text-white shadow-sm"
+                            : "text-slate-400 hover:text-slate-200"
+                        }`}
+                      >
+                        <span>💬 Obrolan AI (Chatbot)</span>
+                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-mono">Auto-Fill</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setInputMode("form")}
+                        className={`flex-1 py-2 px-3 rounded-lg font-medium transition-all flex items-center justify-center gap-1.5 ${
+                          inputMode === "form"
+                            ? "bg-brand-500 text-white shadow-sm"
+                            : "text-slate-400 hover:text-slate-200"
+                        }`}
+                      >
+                        <span>📝 Formulir Manual</span>
+                      </button>
+                    </div>
+
+                    {inputMode === "chat" ? (
+                      <AIChatbotAssistant
+                        activeEngine={activeEngine}
+                        onApplyToForm={handleApplyFromChat}
+                        onSwitchToManualForm={() => setInputMode("form")}
+                      />
+                    ) : (
+                      <div className="glass-panel rounded-2xl p-6 border border-white/10 shadow-xl space-y-5">
+                        <div className="border-b border-white/10 pb-4">
+                          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-400 text-xs font-mono border border-indigo-500/20 mb-2">
+                            Tahap 1 • Konsep & Ide Dasar
+                          </div>
+                          <h2 className="font-display font-semibold text-lg text-white">
+                            Rancang Spesifikasi Produk
+                          </h2>
+                          <p className="text-xs text-slate-400 mt-0.5">
+                            Tuliskan ide aplikasi Anda. AI akan bantu menyusun breakdown fitur dan dokumen PRD lengkap.
+                          </p>
                         </div>
-                        <h2 className="font-display font-semibold text-lg text-white">
-                          Rancang Spesifikasi Produk
-                        </h2>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          Tuliskan ide aplikasi Anda. AI akan bantu menyusun breakdown fitur dan dokumen PRD lengkap.
-                        </p>
-                      </div>
 
                       {/* Nama Website */}
                       <div>
@@ -754,6 +806,7 @@ export default function PRDStudio() {
                         )}
                       </button>
                     </div>
+                  )}
                   </section>
 
                   {/* Right Column: Output PRD Viewer (7 Cols) */}
