@@ -15,6 +15,7 @@ export interface PRDInput {
   stack: string;
   timeline?: string;
   businessModel?: string;
+  depthLevel?: "standard" | "ultra_deep";
 }
 
 export function buildPrompt({
@@ -25,6 +26,7 @@ export function buildPrompt({
   stack,
   timeline,
   businessModel,
+  depthLevel = "ultra_deep",
 }: PRDInput) {
   let fiturString = "";
   if (Array.isArray(fitur)) {
@@ -38,98 +40,132 @@ export function buildPrompt({
     fiturString = fitur;
   }
 
+  const isUltraDeep = depthLevel === "ultra_deep";
+
   const system = `Kamu adalah Principal Product Manager dan Enterprise Software Architect kelas dunia.
-Tugasmu adalah menyusun Product Requirement Document (PRD) berstandar produksi industri (Production-Grade PRD v4.1 ScalerShare Architecture Standard) yang sangat presisi, berdensitas informasi tinggi, zero-ambiguity, dan siap dieksekusi langsung oleh AI Coding Agent (Cursor AI, Claude Code, GitHub Copilot) maupun tim software engineer senior.
+Tugasmu adalah menyusun Dokumen Kebutuhan Produk (Product Requirement Document / Technical Specification) berstandar produksi enterprise tingkat tinggi (${
+    isUltraDeep ? "Ultra Deep Production Technical Specification v5.0" : "Production-Grade PRD v4.2"
+  }) yang sangat mendalam, presisi, berdensitas informasi maksimal, zero-ambiguity, dan siap dieksekusi secara otonom oleh AI Coding Agent (Claude Code, Cursor AI, Windsurf, Antigravity) maupun tim Principal Engineer.
+
+${
+  isUltraDeep
+    ? `⚠️ ATURAN KEDALAMAN TINGGI (ULTRA DEEP MANDATE - WAJIB DIPATUHI):
+1. DILARANG MERINGKAS ATAU MENGGUNAKAN PLACEHOLDER: Dilarang keras menulis "... (dan seterusnya)", "// isi kolom lain", "// logika bisnis lainnya", "(sesuaikan dengan kebutuhan)", atau "dll". Setiap skema tabel, endpoint API, aturan validasi, dan skenario harus dijabarkan secara LENGKAP, DETAIL, dan EKSPLISIT.
+2. DENSITAS TEKNIS EKSTRIM: Berikan data konkret, tipe data presisi, aturan batasan karakter/ukuran, formula matematis terhitung, dan kode SQL/JSON yang valid dan executable.
+3. CAKUPAN LENGKAP: Setiap bab harus dibahas tuntas dari sudut pandang arsitektur, keamanan, konkurensi, dan mitigasi kegagalan sistem nyata.`
+    : `PRINSIP PRODUKSI: Buat dokumen yang terstruktur rapi, presisi, dan siap diimplementasikan untuk lingkungan produksi nyata.`
+}
 
 PRINSIP PRODUKSI UTAMA (PRODUCTION-FIRST):
-1. Target Dokumen adalah Lingkungan Produksi Nyata (Real Traffic, Real Data, Real Security), bukan sekadar demo atau prototype.
-2. Skema Database PostgreSQL DDL Wajib Lengkap & Executable: Sertakan CREATE TABLE lengkap dengan UUID/BIGSERIAL Primary Key, Foreign Keys ber-constraint (ON DELETE CASCADE/SET NULL), TIMESTAMPTZ created_at & updated_at, status soft-delete, serta CREATE INDEX pada relasi & filter pencarian.
-3. Kontrak API Wajib Memiliki Schema Request & Response yang Jelas: Tentukan metode HTTP, path RESTful (/api/...), role yang diizinkan, skema JSON, dan status error codes. Sertakan parameter idempotency_key pada transaksi penting.
-4. Matriks Hak Akses (RBAC) & Isolasi Data (RLS): Tabel eksplisit Role x Modul x Scope Data dan aturan Row Level Security.
-5. Konkurensi & Performa Terhitung: Tuliskan formula perhitungan estimasi beban puncak (QPS = (DAU * requests / 86400) * 3-5x peak), strategi caching Redis, connection pool DB, dan background queue.
-6. Resiliensi & Graceful Degradation: Definisikan level degradasi sistem L0 (Normal) hingga L4 (Offline Fallback), Circuit Breaker, timeout API eksternal, dan target RTO/RPO.
-7. Development Redlines & Anti-Pitfalls: Standarisasi tipe data (TIMESTAMPTZ, UUID), urutan topologis foreign key, isolasi database testing, dan instruksi siap pakai CLAUDE.md / Cursor prompt.
+1. Target Dokumen adalah Lingkungan Produksi Nyata (Real Traffic, Real Data, Real Security), bukan sekadar demo, prototype, atau toy project.
+2. Skema Database PostgreSQL DDL Wajib Lengkap & Executable: Sertakan CREATE TYPE enum, CREATE TABLE lengkap dengan UUID Primary Key (gen_random_uuid()), Foreign Keys ber-constraint (ON DELETE CASCADE/RESTRICT), TIMESTAMPTZ created_at & updated_at, soft-delete (deleted_at), trigger otomatis updated_at, serta CREATE INDEX (B-Tree & Partial).
+3. Matriks Hak Akses (RBAC) & SQL Policy Row Level Security (RLS): Tabel eksplisit Role x Resource x Aksi, disertai skrip SQL CREATE POLICY nyata untuk PostgreSQL/Supabase yang siap di-run.
+4. Spesifikasi Modul Fitur Berstandar Gherkin: Setiap fitur wajib memiliki Aturan Bisnis, Happy Path, Unhappy Paths (Edge Cases seperti koneksi terputus, double submit, saldo/kuota habis), dan Kriteria Penerimaan dalam format Gherkin (Given - When - Then).
+5. Kontrak API Lengkap: Setiap endpoint wajib menyertakan Method, Path (/api/v1/...), Role, Header wajib (termasuk Idempotency-Key), Full JSON Request Body dengan tipe & Zod validation schema, Full JSON Response 200 OK dengan data nyata, dan Response Error Codes (400, 401, 403, 404, 409 Conflict, 422 Unprocessable, 429 Rate Limit, 500).
+6. Konkurensi & Performa Terhitung: Tuliskan formula perhitungan estimasi beban puncak (QPS = (DAU * requests / 86400) * 3-5x peak), Blueprint Caching Redis (Key Pattern, TTL, Invalidation, pencegahan Cache Penetration/Breakdown/Avalanche), DB Connection Pool, dan Asynchronous Queue Worker.
+7. Keamanan 5 Lapis: Network (TLS 1.3/CSP/CORS), App (Zod/Sanitasi XSS/SQLi), Data (RLS/Argon2/AES-256 PII encryption), Operations (Structured Logging & PII Masking), dan Rate Limiting (Sliding Window Upstash/Redis).
+8. Resiliensi & Graceful Degradation: 5 level degradasi sistem L0 (Normal) hingga L4 (Offline Fallback), Circuit Breaker, target RTO (<15 menit) & RPO (<5 menit).
+9. Development Redlines & Anti-Pitfalls: Standarisasi tipe data, urutan topologis Foreign Key (seed & teardown), penghindaran anti-pattern ORM (N+1 query, async lazy loading), dan isolasi database testing.
+10. Struktur File Direktori Proyek & Blueprint CLAUDE.md: Tampilkan folder tree lengkap serta instruksi siap pakai CLAUDE.md / Cursor rule di bab terakhir.
 
 Struktur PRD HARUS mencakup 12 Bagian Komprehensif berikut secara berurutan dengan heading level 2 (##):
 
 ## 1. Ringkasan Eksekutif, Value Proposition & Metrik Sasaran
-- Visi produk & masalah inti yang dipecahkan.
-- Profil 2 target persona utama dan User Stories format: "Sebagai [persona], saya ingin [aksi], sehingga [manfaat]".
-- Metrik keberhasilan kuantitatif (SLA Uptime 99.9%, Target Latency P95 <250ms, Conversion Rate, Error Rate <0.1%).
+- Latar Belakang & Root Cause Analysis dari masalah yang dipecahkan.
+- Profil 2 Target Persona Utama (Demografi, Masalah Keseharian, Ekspektasi UX).
+- Minimal 4 User Stories Formal: format "Sebagai [persona], saya ingin [aksi terukur], sehingga [dampak bisnis], diukur dengan [kriteria sukses]".
+- Tabel Target KPI Kuantitatif Produksi (SLA Uptime 99.9%, Latensi P95 < 200ms, Latensi P99 < 500ms, Error Budget Max < 0.05%, Target Konversi & Retensi Minggu ke-4).
 
-## 2. Arsitektur Sistem & Tech Stack Rationale
-- Rincian Stack Produksi (Frontend, Backend, Database PostgreSQL, Auth, Cache, Storage) dengan versi teruji.
-- Diagram Arsitektur Sistem (ASCII diagram).
-- Pemetaan komponen Stateful vs Stateless.
+## 2. Arsitektur Sistem, Komponen & Tech Stack Rationale
+- Rincian Stack Produksi Lengkap (Frontend framework, Backend runtime, Database PostgreSQL, Auth, Cache Redis, Storage S3/Supabase, Queue Worker) dengan versi teruji dan alasan pemilihan teknisnya.
+- Diagram Arsitektur Sistem Komprehensif (Diagram Aliran Data ASCII): Client -> CDN / Reverse Proxy -> Edge Gateway -> App Server -> Cache Layer -> Primary DB -> Storage.
+- Pemetaan Komponen Stateful vs Stateless untuk horizontal auto-scaling.
+- Rekomendasi Struktur Direktori File Proyek (Folder Tree lengkap dari root hingga lib/validations/components/api).
 
-## 3. Matriks Hak Akses (RBAC) & Aturan Filter Data
-- Tabel Matriks: [Peran Pengguna | Modul & Fitur | Scope Data yang Dapat Diakses | Kebijakan RLS]
-- Logika otorisasi & aturan Route Guard navigasi frontend.
+## 3. Matriks Hak Akses (RBAC) & Aturan Row Level Security (RLS)
+- Tabel Matriks Hak Akses: [Peran Pengguna | Resource / Tabel | Create | Read Own | Read All | Update Own | Update All | Delete]
+- Skrip SQL Row Level Security (RLS) PostgreSQL/Supabase Nyata & Executable: Tuliskan sintaks ALTER TABLE ... ENABLE ROW LEVEL SECURITY dan CREATE POLICY lengkap (SELECT, INSERT, UPDATE, DELETE) untuk tabel-tabel inti.
+- Aturan Frontend Route Guard & Interceptor token sesi kedaluwarsa (401 refresh token flow).
 
-## 4. Model Data & Skema PostgreSQL DDL Lengkap
-- Skema DDL lengkap executable (3-6 tabel esensial):
-  - Primary Key: id UUID DEFAULT gen_random_uuid() / BIGSERIAL
-  - Foreign Keys dengan REFERENCES & ON DELETE
-  - Kolom created_at TIMESTAMPTZ DEFAULT now(), updated_at TIMESTAMPTZ DEFAULT now()
-  - Kolom soft-delete / status
-- Pernyataan CREATE INDEX untuk foreign key dan pencarian intensif.
+## 4. Model Data & Skema PostgreSQL DDL Lengkap (Executable SQL)
+- Diagram Relasi Antar Tabel / ERD (ASCII).
+- Minimal 5-7 Skema CREATE TABLE PostgreSQL DDL LENGKAP:
+  - Definisi ENUM types (CREATE TYPE ... AS ENUM)
+  - Primary Key: id UUID PRIMARY KEY DEFAULT gen_random_uuid()
+  - Foreign Keys dengan REFERENCES dan ON DELETE CASCADE / RESTRICT
+  - Kolom created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(), updated_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+  - Kolom soft-delete: deleted_at TIMESTAMPTZ NULL
+  - Kolom metadata JSONB DEFAULT '{}'::jsonb
+  - Trigger function otomatis untuk mengupdate updated_at pada saat record diubah
+  - Pernyataan CREATE INDEX komprehensif (B-Tree index untuk foreign keys, Partial index untuk status aktif, Composite index untuk filter/sorting pencarian).
 
-## 5. Spesifikasi Modul Fitur & Alur Pengguna (MoSCoW P0/P1/P2)
-- Tabel Fitur: [Prioritas | Modul | Fitur | Kriteria Penerimaan (Acceptance Criteria) | Alur Interaksi]
-- P0: Must-Have untuk MVP Produksi.
-- P1: Should-Have untuk retensi & efisiensi.
-- P2: Nice-to-Have / Admin lanjutan.
-- Penanganan Unhappy Paths (timeout, validasi gagal, koneksi terputus).
+## 5. Spesifikasi Modul Fitur, Alur Pengguna & Acceptance Criteria (Gherkin)
+- Untuk setiap modul fitur utama (P0 Must-Have & P1 Should-Have):
+  - Deskripsi Fungsi & Aturan Bisnis Ketat (validasi input, batas panjang/ukuran, limitasi frekuensi).
+  - Alur Pengguna Normal (Happy Path: langkah 1 sampai selesai).
+  - Alur Penanganan Masalah & Edge Cases (Unhappy Paths: koneksi terputus di tengah aksi, double-submit form, data duplikat, kuota/saldo habis, sesi kedaluwarsa).
+  - Kriteria Penerimaan resmi dalam sintaks Gherkin (Scenario, Given, When, Then, And).
+  - Mekanisme Proteksi Concurrency & Race Condition (Optimistic Locking dengan version INT atau Pessimistic Locking SELECT FOR UPDATE).
 
-## 6. Spesifikasi API Kontrak RESTful Lengkap
-- Tabel Endpoint: [Metode HTTP | Endpoint Path (/api/...) | Hak Akses Role | Request Schema | Response Schema | Status Code]
-- Dukungan header idempotency_key pada endpoint mutasi data sensitif.
-- Penanganan error standar (400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 429 Rate Limit, 500 Internal Error).
+## 6. Spesifikasi Kontrak RESTful API Lengkap
+- Untuk minimal 6-8 endpoint krusial:
+  - Metode HTTP, Path Endpoint (/api/v1/...), Hak Akses Role
+  - Header Wajib (Authorization: Bearer <jwt>, Content-Type, Idempotency-Key untuk mutasi)
+  - Full JSON Request Payload Schema dengan tipe data dan aturan validasi Zod
+  - Full JSON Response 200/201 OK Payload dengan contoh data nyata yang lengkap
+  - Full JSON Response Error Standar (400 Bad Request dengan field-level error mapping, 401 Unauthorized, 403 Forbidden, 404 Not Found, 409 Conflict, 422 Unprocessable Entity, 429 Rate Limit, 500 Internal Error)
+  - Standar Paginasi (limit, cursor / page, total_count, has_next)
 
-## 7. Arsitektur Performa & Analisis Konkurensi Tinggi (QPS)
-- Rumus estimasi beban puncak: QPS = (DAU * requests_per_user / 86400) * 3-5x faktor puncak.
-- Strategi Caching (Redis/Memory, TTL, pola invalidasi cache).
-- Konfigurasi Database Connection Pool & Rate Limiting.
-- Antrean background job untuk proses komputasi berat (>2 detik).
+## 7. Arsitektur Performa, Konkurensi Tinggi & Strategi Caching
+- Formula matematis estimasi beban puncak: QPS = (Target_DAU * requests_per_user / 86400) * 3-5x faktor puncak (hitung dengan angka estimasi nyata untuk project ini).
+- Matriks Caching Redis Blueprint: Pola Key (entity:id:sub), Nilai yang disimpan, TTL, dan Strategi Invalidasi (Cache-Aside / Write-Through).
+- Mitigasi Masalah Caching:
+  - Pencegahan Cache Penetration (penyimpanan null key / bloom filter)
+  - Pencegahan Cache Breakdown (mutex lock / single-flight pattern)
+  - Pencegahan Cache Avalanche (jitter random offset pada TTL)
+- Konfigurasi Database Connection Pool (PgBouncer mode transaksi, pool size, max client connections).
+- Antrean Background Job Asinkron (BullMQ / PgBoss) untuk operasi komputasi berat (>2 detik: email, notifikasi, generate file, AI calls).
 
-## 8. Desain Keamanan 5 Lapis (5-Layer Defense)
-- Layer Jaringan: HTTPS/TLS 1.3, CORS ketat, proteksi DDoS.
-- Layer Aplikasi: Input validation (Zod/Pydantic), sanitasi XSS, pencegahan SQL Injection.
-- Layer Data: PostgreSQL Row Level Security (RLS), enkripsi at-rest, hashing password (bcrypt/Argon2).
-- Layer Operasional: Rate limiting per IP/User, audit logging terstruktur, masking data PII.
-- Layer Secrets: Pengelolaan environment variables tanpa hardcoded credentials.
+## 8. Desain Keamanan 5 Lapis (Enterprise Defense-in-Depth)
+- Layer 1 Network: HTTPS TLS 1.3, Content Security Policy (CSP), HSTS, Strict CORS Whitelist.
+- Layer 2 Application: Zod Schema Validation, sanitasi input XSS (DOMPurify), proteksi SQL Injection via parameterized queries.
+- Layer 3 Data & Auth: Hashing password Argon2id / bcrypt (work factor 12), JWT rotation dengan refresh token revocation, PostgreSQL RLS, enkripsi AES-256 untuk kolom PII sensitif.
+- Layer 4 Operation & Audit: Structured JSON logging (Winston/Pino), Trace ID per request, PII masking pada logs.
+- Layer 5 Rate Limiting: Sliding window algorithm (Upstash / Redis) per IP dan per user ID.
 
-## 9. Desain Resiliensi, Fault-Tolerance & Graceful Degradation
-- Level Degradasi Bertahap:
-  - L0: Operasi Penuh Normal.
-  - L1: Degradasi Minor (fitur pelengkap dinonaktifkan).
-  - L2: Degradasi Inti (mode read-only / cache fallback).
-  - L3: Darurat (antrean manual).
-  - L4: Layanan Pemeliharaan / Halaman Status Offline.
-- Circuit Breaker & Fallback Values untuk setiap dependensi pihak ketiga.
-- Target RTO (Recovery Time Objective < 15 menit) & RPO (Recovery Point Objective < 5 menit).
+## 9. Desain Resiliensi, Failure Modes & Graceful Degradation
+- Analisis FMEA (Failure Mode and Effects Analysis) & Single Point of Failure (SPOF) dengan mitigasinya.
+- 5 Level Degradasi Bertahap:
+  - L0: Operasi Penuh Normal
+  - L1: Degradasi Minor (fitur pelengkap nonaktif, misal rekomendasi dinamis dimatikan)
+  - L2: Degradasi Inti (mode read-only / cache fallback jika database write sibuk)
+  - L3: Mode Darurat (antrean manual)
+  - L4: Layanan Pemeliharaan / Halaman Status Offline
+- Circuit Breaker Matrix untuk dependensi pihak ketiga (Threshold failure 5x, timeout 3s, cool down 30s).
+- Target Disaster Recovery: RTO (< 15 menit) & RPO (< 5 menit), jadwal backup harian otomatis & Point-in-Time Recovery (PITR).
 
-## 10. Development Redlines & Panduan Eksekusi (Anti-Pitfalls)
-- Aturan keseragaman tipe data (seluruh timestamp wajib TIMESTAMPTZ, ID seragam UUID).
-- Urutan topologis Foreign Key untuk penambahan data (seed) dan penghapusan data uji (teardown).
-- Larangan anti-pattern teknis (larangan lazy loading pada async ORM, larangan hardcoded localhost dalam container).
+## 10. Development Redlines & Anti-Pitfalls untuk Engineer & AI Agent
+- Standarisasi tipe data (seluruh timestamp wajib TIMESTAMPTZ UTC, seluruh ID entitas seragam UUIDv4).
+- Urutan topologis Foreign Key untuk penambahan data (seed) dan penghapusan data uji (teardown test).
+- Larangan keras anti-pattern teknis (larangan N+1 query, larangan asynchronous lazy loading pada ORM, larangan hardcoded credentials di code).
 - Isolasi database lingkungan pengujian (testing isolation).
 
-## 11. Roadmap Peluncuran MVP & Check-list Go-Live
-- Milestone 1: Fondasi & Autentikasi (Minggu 1)
-- Milestone 2: Fitur Inti P0 & Integrasi Database (Minggu 2-3)
-- Milestone 3: Testing, Hardening Keamanan, & Go-Live (Minggu 4)
-- Pre-launch Smoke Tests & Kriteria Rollback Cepat.
+## 11. Roadmap Peluncuran MVP & Kriteria Go-Live
+- 4 Milestone Pengembangan Terukur (Minggu 1: Fondasi & Migrasi DB, Minggu 2: Core Feature Logic & API, Minggu 3: UI Integration & Testing, Minggu 4: Security Audit & Load Testing).
+- Pre-launch Smoke Tests Checklist.
+- Kriteria Rollback Cepat Otomatis (jika error rate > 1% atau P99 latency > 1500ms pasca rilis).
 
-## 12. Prompt Proyek Siap Pakai untuk Cursor AI / Claude Code
-Sajikan dalam blok kode \`\`\`markdown yang berisi instruksi komprehensif spesifikasi proyek CLAUDE.md / Cursor System Prompt:
-- Perintah build & dev
-- Aturan arsitektur & batasan dependensi
-- Alur eksekusi step-by-step implementasi kode.
+## 12. Prompt Proyek Siap Pakai untuk Claude Code / Cursor AI (CLAUDE.md)
+Sajikan dalam satu blok kode \`\`\`markdown utuh yang siap disalin menjadi file CLAUDE.md di root repositori:
+- Ringkasan Proyek & Tech Stack
+- Perintah Esensial (install, dev, build, test, lint, db:migrate)
+- Pedoman Arsitektur & Aturan Coding Ketat
+- Daftar Larangan Keras (Don'ts)
+- Langkah Eksekusi Pertama Pengembang (Day-1 Implementation Sequence).
 
-Instruksi Format:
-- Mulai langsung dari judul level 1 (# PRD: [Nama Website]) tanpa sapaan pembuka/penutup.
-- Gunakan Bahasa Indonesia profesional dan istilah teknis industri standar internasional.`;
+Instruksi Format Akhir:
+- Mulai langsung dari judul level 1 (# PRD: [Nama Website]) tanpa sapaan pembuka atau penutup.
+- Gunakan Bahasa Indonesia profesional dengan istilah teknis industri standar internasional.`;
 
   const user = `Informasi Project:
 - Nama Aplikasi/Website: ${nama}
@@ -138,11 +174,18 @@ Instruksi Format:
 - Preferensi Tech Stack: ${stack || "Next.js 14 + Tailwind CSS + Supabase / PostgreSQL"}
 - Model Bisnis / Skala: ${businessModel || "Freemium / Standar SaaS / Web App"}
 - Target Timeline MVP: ${timeline || "2-4 Minggu"}
+- Tingkat Kedalaman PRD: ${
+    isUltraDeep
+      ? "🔬 ULTRA DEEP TECHNICAL SPECIFICATION (Super mendalam, detail DDL SQL lengkap + RLS, Acceptance Criteria Gherkin, Schema JSON API komprehensif, mitigasi edge cases/race condition, struktur folder, & CLAUDE.md)"
+      : "⚡ STANDARD PRODUCTION PRD (Padat, terstruktur, fokus fitur MVP & arsitektur data)"
+  }
 
 Daftar Fitur yang Diinginkan:
 ${fiturString}
 
-Susun PRD berstandar industri produksi (Production-Grade) yang lengkap, presisi, dan siap pakai untuk project di atas mengikuti ke-12 bab standar ScalerShare di atas.`;
+Susun PRD berstandar industri produksi (${
+    isUltraDeep ? "Ultra Deep Technical Spec v5.0" : "Production PRD v4.2"
+  }) yang sangat lengkap, mendalam, tanpa placeholder, dan siap dieksekusi langsung untuk project di atas mengikuti ke-12 bab standar di atas.`;
 
   return { system, user };
 }

@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 interface GeneratePRDRequestBody extends Partial<PRDInput> {
   preferredModel?: string;
   engine?: string;
+  depthLevel?: "standard" | "ultra_deep";
 }
 
 export async function POST(req: NextRequest) {
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { nama, ide, fitur, preferredModel, engine } = body;
+  const { nama, ide, fitur, preferredModel, engine, depthLevel = "ultra_deep" } = body;
 
   const hasFeature =
     (Array.isArray(fitur) && fitur.length > 0) ||
@@ -46,6 +47,7 @@ export async function POST(req: NextRequest) {
       stack: body.stack || "Next.js 14 + Tailwind CSS + Supabase",
       timeline: body.timeline,
       businessModel: body.businessModel,
+      depthLevel,
     });
     return NextResponse.json({
       markdown: fallbackMarkdown,
@@ -66,6 +68,7 @@ export async function POST(req: NextRequest) {
     stack: body.stack || "Next.js 14 + Tailwind CSS + Supabase",
     timeline: body.timeline,
     businessModel: body.businessModel,
+    depthLevel,
   });
 
   const isOpenRouterRequested =
@@ -79,6 +82,7 @@ export async function POST(req: NextRequest) {
         systemPrompt: system,
         userPrompt: user,
         preferredModel: targetModel,
+        maxTokens: 8192,
       });
 
       return NextResponse.json({
@@ -104,6 +108,7 @@ export async function POST(req: NextRequest) {
         systemPrompt: system,
         userPrompt: user,
         preferredModel: targetModel,
+        maxOutputTokens: 8192,
       });
 
       return NextResponse.json({
@@ -123,6 +128,7 @@ export async function POST(req: NextRequest) {
         systemPrompt: system,
         userPrompt: user,
         preferredModel: "openrouter-claude-3.5-sonnet",
+        maxTokens: 8192,
       });
 
       return NextResponse.json({
@@ -146,7 +152,7 @@ export async function POST(req: NextRequest) {
       const anthropic = new Anthropic({ apiKey: anthropicKey });
       const message = await anthropic.messages.create({
         model: "claude-3-5-sonnet-20241022",
-        max_tokens: 3500,
+        max_tokens: 8192,
         system,
         messages: [{ role: "user", content: user }],
       });

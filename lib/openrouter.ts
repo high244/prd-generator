@@ -61,8 +61,8 @@ export async function generateWithOpenRouter(
     body: JSON.stringify({
       model,
       messages,
-      temperature: options.temperature ?? 0.4,
-      max_tokens: options.maxTokens ?? 4000,
+      temperature: options.temperature ?? 0.3,
+      max_tokens: options.maxTokens ?? 8192,
     }),
   });
 

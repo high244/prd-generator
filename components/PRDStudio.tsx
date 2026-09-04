@@ -120,6 +120,7 @@ export default function PRDStudio() {
   const [target, setTarget] = useState("");
   const [stack, setStack] = useState(TECH_STACK_PRESETS[0]);
   const [timeline, setTimeline] = useState("2-4 Minggu (Fokus MVP)");
+  const [depthLevel, setDepthLevel] = useState<"standard" | "ultra_deep">("ultra_deep");
 
   // Feature Discovery
   const [features, setFeatures] = useState<FeatureItem[]>([]);
@@ -151,6 +152,7 @@ export default function PRDStudio() {
     setTarget("");
     setStack(TECH_STACK_PRESETS[0]);
     setTimeline("2-4 Minggu (Fokus MVP)");
+    setDepthLevel("ultra_deep");
     setFeatures([]);
     setMarkdown("");
     setStatus("idle");
@@ -216,7 +218,7 @@ export default function PRDStudio() {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [nama, ide, category, target, stack, timeline, features, markdown, chatMessages, chatMode, currentView]);
+  }, [nama, ide, category, target, stack, timeline, depthLevel, features, markdown, chatMessages, chatMode, currentView]);
 
   function showToast(msg: string) {
     setToastMessage(msg);
@@ -302,6 +304,7 @@ export default function PRDStudio() {
       target: target.trim(),
       stack: stack || TECH_STACK_PRESETS[0],
       timeline: timeline || "2-4 Minggu (Fokus MVP)",
+      depthLevel,
       features: features || [],
       markdown: markdown || "",
       model: aiModel || activeEngine,
@@ -343,6 +346,7 @@ export default function PRDStudio() {
     setTarget(project.target || "");
     setStack(project.stack || TECH_STACK_PRESETS[0]);
     setTimeline(project.timeline || "2-4 Minggu (Fokus MVP)");
+    setDepthLevel(project.depthLevel || "ultra_deep");
     setFeatures(project.features || []);
     setMarkdown(project.markdown || "");
     setAiSource(project.source || "gemini");
@@ -555,6 +559,7 @@ export default function PRDStudio() {
           target,
           stack,
           timeline,
+          depthLevel,
           preferredModel: activeEngine,
           engine: activeEngine,
         }),
@@ -581,6 +586,7 @@ export default function PRDStudio() {
         target,
         stack,
         timeline,
+        depthLevel,
         features,
         markdown: data.markdown,
         model: data.model || activeEngine,
@@ -619,6 +625,7 @@ export default function PRDStudio() {
       target,
       stack,
       timeline,
+      depthLevel,
       features,
       markdown,
       model: aiModel || activeEngine,
@@ -1033,6 +1040,64 @@ export default function PRDStudio() {
                                 {t}
                               </button>
                             ))}
+                          </div>
+                        </div>
+
+                        {/* Tingkat Kedalaman PRD (Depth Mode) */}
+                        <div className="pt-2">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                              Tingkat Kedalaman Dokumen
+                            </label>
+                            <span className="text-[10px] text-brand-300 font-medium bg-brand-500/10 border border-brand-500/30 px-2 py-0.5 rounded-full">
+                              🔥 Default: Ultra Deep
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setDepthLevel("ultra_deep")}
+                              className={`p-2.5 rounded-xl border text-left transition-all relative ${
+                                depthLevel === "ultra_deep"
+                                  ? "bg-brand-500/15 border-brand-500 text-white shadow-glow"
+                                  : "bg-slate-900/50 border-white/5 text-slate-400 hover:text-slate-200"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-sm">🔬</span>
+                                  <span className="text-xs font-bold text-slate-100">Ultra Deep Spec</span>
+                                </div>
+                                {depthLevel === "ultra_deep" && (
+                                  <span className="w-2 h-2 rounded-full bg-brand-400 animate-pulse" />
+                                )}
+                              </div>
+                              <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">
+                                DDL SQL lengkap + RLS, Gherkin Given-When-Then, skema API JSON, edge case, race condition, & rule Claude Code.
+                              </p>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDepthLevel("standard")}
+                              className={`p-2.5 rounded-xl border text-left transition-all relative ${
+                                depthLevel === "standard"
+                                  ? "bg-brand-500/15 border-brand-500 text-white shadow-glow"
+                                  : "bg-slate-900/50 border-white/5 text-slate-400 hover:text-slate-200"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-sm">⚡</span>
+                                  <span className="text-xs font-bold text-slate-100">Standard PRD</span>
+                                </div>
+                                {depthLevel === "standard" && (
+                                  <span className="w-2 h-2 rounded-full bg-brand-400 animate-pulse" />
+                                )}
+                              </div>
+                              <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">
+                                Format padat & cepat, fokus spesifikasi fitur MVP esensial dan alur pengguna dasar.
+                              </p>
+                            </button>
                           </div>
                         </div>
                       </div>

@@ -42,6 +42,7 @@ export interface SavedPRDProject {
   markdown: string;
   model: string;
   source: "gemini" | "claude" | "openrouter" | "fallback";
+  depthLevel?: "standard" | "ultra_deep";
   chatHistory?: SavedChatMessage[];
   chatMode?: "quick" | "discovery";
   createdAt: string; // ISO string
