@@ -1,0 +1,275 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-dark: #090D16;
+  --card-bg: rgba(15, 23, 42, 0.75);
+  --card-border: rgba(255, 255, 255, 0.08);
+  --accent-glow: rgba(99, 102, 241, 0.15);
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+  background-color: var(--bg-dark);
+  color: #F1F5F9;
+  font-family: var(--font-body), system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Ambient background pattern */
+.bg-ambient-pattern {
+  background-color: #080C15;
+  background-image: 
+    radial-gradient(at 15% 10%, rgba(99, 102, 241, 0.18) 0px, transparent 40%),
+    radial-gradient(at 85% 15%, rgba(56, 189, 248, 0.15) 0px, transparent 40%),
+    radial-gradient(at 50% 85%, rgba(139, 92, 246, 0.12) 0px, transparent 50%),
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 36px 36px, 36px 36px;
+}
+
+/* Glassmorphism Card */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+}
+
+.glass-panel-elevated {
+  background: rgba(26, 38, 66, 0.65);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* Custom modern scrollbars */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+/* Input Styles */
+.input-glass {
+  background: rgba(11, 19, 36, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #F8FAFC;
+  transition: all 0.2s ease;
+}
+.input-glass:focus {
+  outline: none;
+  border-color: #818CF8;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+  background: rgba(15, 23, 42, 0.95);
+}
+.input-glass::placeholder {
+  color: #64748B;
+}
+
+/* Markdown Rendering in Document Viewer */
+.prd-doc-view {
+  color: #E2E8F0;
+  line-height: 1.7;
+}
+
+.prd-doc-view h1 {
+  font-family: var(--font-display), serif;
+  font-size: 1.85rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.prd-doc-view h2 {
+  font-family: var(--font-display), serif;
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: #F8FAFC;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.prd-doc-view h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #93C5FD;
+  margin-top: 1.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.prd-doc-view p {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #CBD5E1;
+}
+
+.prd-doc-view ul,
+.prd-doc-view ol {
+  margin-top: 0;
+  margin-bottom: 1.25rem;
+  padding-left: 1.5rem;
+}
+
+.prd-doc-view li {
+  margin-bottom: 0.35rem;
+  color: #CBD5E1;
+}
+
+.prd-doc-view strong {
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+.prd-doc-view hr {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 2rem 0;
+}
+
+.prd-doc-view table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 1.25rem 0 1.75rem;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.prd-doc-view th {
+  background: rgba(30, 41, 59, 0.9);
+  color: #F1F5F9;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.prd-doc-view td {
+  padding: 10px 14px;
+  font-size: 0.88rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(15, 23, 42, 0.5);
+  color: #CBD5E1;
+}
+
+.prd-doc-view tr:last-child td {
+  border-bottom: none;
+}
+
+.prd-doc-view tr:hover td {
+  background: rgba(30, 41, 59, 0.5);
+}
+
+.prd-doc-view pre {
+  background: #0B1120;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.85rem;
+  color: #E2E8F0;
+  margin: 1.25rem 0;
+}
+
+.prd-doc-view code {
+  font-family: var(--font-mono), monospace;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.85em;
+  color: #38BDF8;
+}
+
+.prd-doc-view pre code {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+}
+
+.prd-doc-view blockquote {
+  border-left: 3px solid #6366F1;
+  padding-left: 1rem;
+  margin: 1rem 0;
+  color: #94A3B8;
+  font-style: italic;
+  background: rgba(99, 102, 241, 0.05);
+  padding: 0.75rem 1rem;
+  border-radius: 0 8px 8px 0;
+}
+
+/* Executive Print Stylesheet */
+@media print {
+  body {
+    background: #FFFFFF !important;
+    color: #0F172A !important;
+  }
+  .bg-ambient-pattern,
+  nav,
+  header,
+  section:first-of-type,
+  .xl\:col-span-5,
+  .glass-panel > div:first-child,
+  button {
+    display: none !important;
+  }
+  .xl\:col-span-7 {
+    width: 100% !important;
+  }
+  .glass-panel {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  .prd-doc-view {
+    color: #0F172A !important;
+  }
+  .prd-doc-view h1,
+  .prd-doc-view h2,
+  .prd-doc-view h3 {
+    color: #0F172A !important;
+  }
+  .prd-doc-view table {
+    border: 1px solid #CBD5E1 !important;
+  }
+  .prd-doc-view th {
+    background: #F1F5F9 !important;
+    color: #0F172A !important;
+    border: 1px solid #CBD5E1 !important;
+  }
+  .prd-doc-view td {
+    background: #FFFFFF !important;
+    color: #334155 !important;
+    border: 1px solid #E2E8F0 !important;
+  }
+  .prd-doc-view pre {
+    background: #F8FAFC !important;
+    color: #0F172A !important;
+    border: 1px solid #E2E8F0 !important;
+  }
+}
