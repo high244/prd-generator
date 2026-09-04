@@ -36,8 +36,8 @@ export default function PRDViewer({
   isSaved = false,
   onShowToast,
 }: PRDViewerProps) {
-  // View mode: 'tabs' (Modular) | 'accordion' (Collapsible) | 'full' (Traditional) | 'audit' (Quality Audit) | 'prompt' | 'raw'
-  const [viewMode, setViewMode] = useState<"tabs" | "accordion" | "full" | "audit" | "prompt" | "raw">("tabs");
+  // View mode: 'full' (Default) | 'prompt' | 'raw'
+  const [viewMode, setViewMode] = useState<"tabs" | "accordion" | "full" | "audit" | "prompt" | "raw">("full");
   const [activeTabGroup, setActiveTabGroup] = useState<number>(0);
   const [expandedSections, setExpandedSections] = useState<Record<number, boolean>>({
     1: true,
@@ -252,39 +252,13 @@ Mohon buatkan implementasi tahap pertama dari project ini berdasarkan PRD.`;
         <div className="flex items-center gap-1 p-1 bg-slate-950/80 rounded-xl border border-white/5">
           <button
             type="button"
-            onClick={() => setViewMode("tabs")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              viewMode === "tabs"
-                ? "bg-brand-500 text-white shadow-sm"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-            title="Tampilan Modular per Bab (Ringkas & Nyaman Dibaca)"
-          >
-            📑 Tab Bab Pintar
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setViewMode("accordion")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              viewMode === "accordion"
-                ? "bg-brand-500 text-white shadow-sm"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-            title="Tampilan Bab yang Dapat Dilipat"
-          >
-            📂 Bab Lipat
-          </button>
-
-          <button
-            type="button"
             onClick={() => setViewMode("full")}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               viewMode === "full"
-                ? "bg-brand-500 text-white shadow-sm"
+                ? "bg-brand-500 text-white shadow-sm font-semibold"
                 : "text-slate-400 hover:text-slate-200"
             }`}
-            title="Tampilan Dokumen Lengkap Tradisional"
+            title="Tampilan Dokumen Lengkap"
           >
             📄 Dokumen Lengkap
           </button>
