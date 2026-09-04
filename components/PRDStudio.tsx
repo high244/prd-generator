@@ -101,6 +101,8 @@ export default function PRDStudio() {
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isEngineModalOpen, setIsEngineModalOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Storage & Projects
   const [savedProjects, setSavedProjects] = useState<SavedPRDProject[]>([]);
@@ -172,11 +174,24 @@ export default function PRDStudio() {
     showToast(`Selamat datang, ${user.name}! (${user.plan === "pro" ? "👑 Pro Tier" : "⚡ Free Tier"})`);
   }
 
-  function handleLogout() {
-    logoutUserSession();
-    setCurrentUser(null);
-    resetToDefaultState();
-    showToast("Anda telah berhasil keluar dari akun.");
+  function handleLogoutRequest() {
+    setIsLogoutModalOpen(true);
+  }
+
+  function handleLogoutConfirm() {
+    setIsLoggingOut(true);
+    setTimeout(() => {
+      logoutUserSession();
+      setCurrentUser(null);
+      resetToDefaultState();
+      setIsLogoutModalOpen(false);
+      setIsLoggingOut(false);
+      showToast("Anda telah berhasil keluar dari akun.");
+    }, 800);
+  }
+
+  function handleLogoutCancel() {
+    setIsLogoutModalOpen(false);
   }
 
   // Engine Change (Protected for Pro only)
@@ -545,7 +560,7 @@ export default function PRDStudio() {
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           currentUser={currentUser}
-          onLogout={handleLogout}
+          onLogout={handleLogoutRequest}
         />
 
         {/* Main Content Area */}
@@ -913,6 +928,68 @@ export default function PRDStudio() {
         activeEngine={activeEngine}
         onSelectEngine={handleSelectEngine}
       />
+
+      {/* Logout Confirmation Modal */}
+      {isLogoutModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={handleLogoutCancel}
+          />
+          {/* Modal Card */}
+          <div className="relative w-full max-w-sm mx-4 rounded-2xl bg-slate-900 border border-white/10 shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200">
+            {/* Icon */}
+            <div className="flex justify-center mb-4">
+              <div className="w-14 h-14 rounded-full bg-rose-500/15 border border-rose-500/30 flex items-center justify-center">
+                <svg className="w-7 h-7 text-rose-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Title & Description */}
+            <h3 className="text-center text-white font-display font-semibold text-lg mb-1">
+              Keluar dari Akun?
+            </h3>
+            <p className="text-center text-slate-400 text-sm mb-6 leading-relaxed">
+              Sesi kerja Anda akan berakhir dan Anda akan kembali ke halaman login.
+            </p>
+
+            {/* Buttons */}
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={handleLogoutCancel}
+                disabled={isLoggingOut}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium border border-white/10 transition-all disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleLogoutConfirm}
+                disabled={isLoggingOut}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-sm font-medium border border-rose-500/40 shadow-lg shadow-rose-500/20 transition-all disabled:opacity-70 flex items-center justify-center gap-2"
+              >
+                {isLoggingOut ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    <span>Keluar...</span>
+                  </>
+                ) : (
+                  <span>Ya, Logout</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast Notification */}
       {toastMessage && (
