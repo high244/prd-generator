@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { SavedPRDProject, AIEngineOption, AI_ENGINE_OPTIONS, UserProfile } from "@/lib/types";
+import { SavedPRDProject, AIEngineOption, UserProfile } from "@/lib/types";
 
 interface SidebarProps {
   currentView: "dashboard" | "generator";
@@ -11,8 +11,8 @@ interface SidebarProps {
   onSelectProject: (project: SavedPRDProject) => void;
   onNewProject: () => void;
   onDeleteProject: (id: string, e: React.MouseEvent) => void;
-  activeEngine: AIEngineOption;
-  onOpenEngineModal: () => void;
+  activeEngine?: AIEngineOption;
+  onOpenEngineModal?: () => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   currentUser: UserProfile;
@@ -27,8 +27,6 @@ export default function Sidebar({
   onSelectProject,
   onNewProject,
   onDeleteProject,
-  activeEngine,
-  onOpenEngineModal,
   isCollapsed,
   onToggleCollapse,
   currentUser,
@@ -40,8 +38,6 @@ export default function Sidebar({
     p.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  const activeEngineMeta = AI_ENGINE_OPTIONS.find((e) => e.id === activeEngine) || AI_ENGINE_OPTIONS[0];
 
   function formatRelativeDate(isoString: string): string {
     try {
@@ -64,30 +60,24 @@ export default function Sidebar({
         isCollapsed ? "w-16" : "w-72 sm:w-80"
       } shrink-0 h-full max-h-full overflow-hidden select-none`}
     >
-      {/* Sidebar Header */}
-      <div className="p-3.5 border-b border-white/10 flex items-center justify-between gap-2">
+      {/* Sidebar Header: Clean workspace navigation label and collapse toggle */}
+      <div className="h-14 px-3.5 border-b border-white/10 flex items-center justify-between gap-2 shrink-0">
         {!isCollapsed && (
-          <div className="flex items-center gap-2.5 overflow-hidden">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-500 to-brand-accent flex items-center justify-center text-white shadow-glow shrink-0">
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                <polygon points="12 2 2 7 12 12 22 7 12 2" />
-                <polyline points="2 17 12 22 22 17" />
-                <polyline points="2 12 12 17 22 12" />
-              </svg>
-            </div>
-            <div className="truncate">
-              <div className="font-display font-bold text-sm text-white leading-tight">
-                PRD Architect
-              </div>
-              <div className="text-[10px] text-slate-400 font-mono">Workspace AI</div>
-            </div>
+          <div className="flex items-center gap-2 text-slate-400">
+            <svg className="w-4 h-4 text-brand-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <line x1="9" y1="3" x2="9" y2="21" />
+            </svg>
+            <span className="text-xs font-semibold text-slate-300 tracking-wide">Navigasi Workspace</span>
           </div>
         )}
 
         <button
           type="button"
           onClick={onToggleCollapse}
-          className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors ml-auto"
+          className={`p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors ${
+            isCollapsed ? "mx-auto" : "ml-auto"
+          }`}
           title={isCollapsed ? "Buka Sidebar" : "Lipat Sidebar"}
         >
           <svg
@@ -116,7 +106,7 @@ export default function Sidebar({
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
-          {!isCollapsed && <span>+ Buat PRD Baru</span>}
+          {!isCollapsed && <span>Buat PRD Baru</span>}
         </button>
       </div>
 
@@ -252,77 +242,25 @@ export default function Sidebar({
         )}
       </div>
 
-      {/* Sidebar Footer: AI Engine Active Pill Badge (Matches user screenshot) */}
-      <div className="shrink-0 mt-auto p-3 border-t border-white/10 bg-slate-950/90 space-y-2">
-        {currentUser.plan === "pro" ? (
-          /* PRO USER (Admin): Full details, Ubah button, and model name from screenshot */
-          <button
-            type="button"
-            onClick={onOpenEngineModal}
-            className={`w-full p-2.5 rounded-xl bg-slate-900 hover:bg-slate-850 border border-white/10 hover:border-brand-500/40 transition-all text-left group ${
-              isCollapsed ? "flex items-center justify-center p-2" : ""
-            }`}
-            title="Pengaturan AI Engine (Pro Plan)"
-          >
-            {isCollapsed ? (
-              <span className="h-3 w-3 rounded-full bg-emerald-400 animate-pulse" />
-            ) : (
-              <div>
-                {/* The user-requested pill badge */}
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-950 border border-white/10 text-[11px] text-slate-300">
-                    <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="font-medium">AI Engine Active</span>
-                  </div>
-                  <span className="text-[10px] text-slate-500 group-hover:text-brand-400 transition-colors">
-                    Ubah ⚙️
-                  </span>
-                </div>
-                <div className="text-xs font-semibold text-slate-200 truncate">
-                  {activeEngineMeta.name}
-                </div>
-                <div className="text-[10px] text-slate-400 font-mono truncate">
-                  {activeEngineMeta.provider}
-                </div>
-              </div>
-            )}
-          </button>
-        ) : (
-          /* FREE USER (Member): Locked engine, ONLY AI Engine Active pill, no model text, no change button */
-          <div
-            className={`w-full p-2.5 rounded-xl bg-slate-900/80 border border-white/5 text-center ${
-              isCollapsed ? "flex items-center justify-center p-2" : ""
-            }`}
-            title="AI Engine terstandar (Paket Free)"
-          >
-            {isCollapsed ? (
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
-            ) : (
-              <div className="flex items-center justify-center">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-950 border border-white/10 text-[11px] text-slate-300">
-                  <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                  <span className="font-medium">AI Engine Active</span>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* User Account Info & Logout */}
-        {!isCollapsed && (
-          <div className="pt-2 border-t border-white/5 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2 min-w-0 pr-2">
-              <div className="w-6 h-6 rounded-full bg-brand-500/20 text-brand-300 flex items-center justify-center text-[10px] font-bold shrink-0">
+      {/* Sidebar Footer: User Account Info & Logout */}
+      <div className="shrink-0 mt-auto p-3 border-t border-white/10 bg-slate-950/90">
+        {!isCollapsed ? (
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2.5 min-w-0 pr-2">
+              <div className="w-7 h-7 rounded-full bg-brand-500/20 border border-brand-500/30 text-brand-300 flex items-center justify-center text-xs font-bold shrink-0">
                 {currentUser.name.charAt(0).toUpperCase()}
               </div>
               <div className="truncate">
-                <div className="font-medium text-slate-200 text-[11px] truncate flex items-center gap-1">
-                  <span>{currentUser.name}</span>
+                <div className="font-medium text-slate-200 text-xs truncate flex items-center gap-1.5">
+                  <span className="truncate">{currentUser.name}</span>
                   {currentUser.plan === "pro" ? (
-                    <span className="text-[9px] px-1 rounded bg-amber-500/20 text-amber-300 font-mono">PRO</span>
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono font-semibold shrink-0">PRO</span>
                   ) : (
-                    <span className="text-[9px] px-1 rounded bg-white/10 text-slate-400 font-mono">FREE</span>
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-white/10 text-slate-400 font-mono shrink-0">FREE</span>
                   )}
+                </div>
+                <div className="text-[10px] text-slate-500 truncate font-mono">
+                  {currentUser.email || "Active Session"}
                 </div>
               </div>
             </div>
@@ -330,7 +268,28 @@ export default function Sidebar({
             <button
               type="button"
               onClick={onLogout}
-              className="p-1 rounded text-slate-500 hover:text-rose-400 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-rose-500/15 text-slate-400 hover:text-rose-400 transition-colors shrink-0"
+              title="Keluar (Logout)"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-2">
+            <div
+              className="w-7 h-7 rounded-full bg-brand-500/20 border border-brand-500/30 text-brand-300 flex items-center justify-center text-xs font-bold"
+              title={`${currentUser.name} (${currentUser.plan.toUpperCase()})`}
+            >
+              {currentUser.name.charAt(0).toUpperCase()}
+            </div>
+            <button
+              type="button"
+              onClick={onLogout}
+              className="p-1.5 rounded-lg hover:bg-rose-500/15 text-slate-400 hover:text-rose-400 transition-colors"
               title="Keluar (Logout)"
             >
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>

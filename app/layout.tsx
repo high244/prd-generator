@@ -25,13 +25,6 @@ export const metadata: Metadata = {
   description:
     "Ubah ide mentah menjadi Dokumen Kebutuhan Produk (PRD) berstandar industri dengan AI. Dilengkapi fitur discovery cerdas dan prompt siap pakai untuk Cursor / Claude Code.",
   keywords: ["PRD Generator", "Product Requirements Document", "Claude AI", "Cursor AI", "Software Architecture"],
-  icons: {
-    icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
-    ],
-    shortcut: "/icon.svg",
-    apple: "/icon.svg",
-  },
 };
 
 export default function RootLayout({
