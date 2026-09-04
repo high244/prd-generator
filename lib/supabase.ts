@@ -342,7 +342,9 @@ export function getCurrentUserSession(): UserProfile | null {
   try {
     const raw = localStorage.getItem(AUTH_SESSION_KEY);
     if (!raw) return null;
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.user) return parsed.user;
+    return parsed;
   } catch {
     return null;
   }
