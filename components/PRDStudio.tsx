@@ -17,6 +17,8 @@ import {
 import {
   getCurrentUserSession,
   logoutUserSession,
+  refreshUserSessionActivity,
+  getSessionTimeoutMinutes,
 } from "@/lib/supabase";
 import {
   loadSavedProjects,
@@ -97,6 +99,7 @@ const TECH_STACK_PRESETS = [
 export default function PRDStudio() {
   // Auth Session State
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [sessionTimeoutMinutes, setSessionTimeoutMinutes] = useState<number>(15);
 
   // Navigation & View State
   const [currentView, setCurrentView] = useState<"dashboard" | "generator">("dashboard");
@@ -169,6 +172,7 @@ export default function PRDStudio() {
     const sessionUser = getCurrentUserSession();
     if (sessionUser) {
       setCurrentUser(sessionUser);
+      setSessionTimeoutMinutes(getSessionTimeoutMinutes());
       const projects = loadSavedProjects(sessionUser.id);
       setSavedProjects(projects);
       resetToDefaultState();
@@ -181,6 +185,41 @@ export default function PRDStudio() {
       });
     }
   }, []);
+
+  // Inactivity & Session Timeout Tracker
+  // Mendeteksi aktivitas user dan otomatis kick user jika idle melebihi batas waktu
+  useEffect(() => {
+    if (!currentUser) return;
+
+    let lastInteraction = Date.now();
+    const handleUserActivity = () => {
+      const now = Date.now();
+      // Throttle refresh activity ke localStorage minimal tiap 10 detik
+      if (now - lastInteraction > 10000) {
+        lastInteraction = now;
+        refreshUserSessionActivity();
+      }
+    };
+
+    const events = ["mousemove", "keydown", "click", "scroll", "touchstart"];
+    events.forEach((evt) => window.addEventListener(evt, handleUserActivity, { passive: true }));
+
+    // Cek berkala setiap 5 detik: jika waktu inaktivitas habis, logout otomatis dan cegah masuk dashboard
+    const checkInterval = setInterval(() => {
+      const session = getCurrentUserSession();
+      if (!session) {
+        // Sesi telah kedaluwarsa oleh getCurrentUserSession()
+        setCurrentUser(null);
+        resetToDefaultState();
+        showToast("Sesi login Anda telah berakhir karena inaktivitas.");
+      }
+    }, 5000);
+
+    return () => {
+      events.forEach((evt) => window.removeEventListener(evt, handleUserActivity));
+      clearInterval(checkInterval);
+    };
+  }, [currentUser]);
 
   // Debounced Auto Save Draft Effect
   useEffect(() => {
@@ -228,6 +267,7 @@ export default function PRDStudio() {
   // Auth Handlers
   function handleLoginSuccess(user: UserProfile) {
     setCurrentUser(user);
+    setSessionTimeoutMinutes(getSessionTimeoutMinutes());
     const projects = loadSavedProjects(user.id);
     setSavedProjects(projects);
     resetToDefaultState();
@@ -686,6 +726,17 @@ export default function PRDStudio() {
           {/* Right Header Navigation, Active Engine Badge & User Profile */}
           <div className="flex items-center gap-3">
 
+            {/* Session Inactivity Badge */}
+            <div
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900 border border-white/10 text-xs text-slate-300"
+              title={`Sesi aktif: auto-logout otomatis jika tidak ada aktivitas selama ${sessionTimeoutMinutes} menit`}
+            >
+              <span className="text-amber-400">⏱️</span>
+              <span className="text-[11px] font-mono text-slate-400">
+                Sesi: <span className="text-amber-300 font-semibold">{sessionTimeoutMinutes}m</span> Idle
+              </span>
+            </div>
+
             {/* AI Engine Active Pill Badge (Pro shows Ubah & model name, Free only shows AI Engine Active) */}
             {currentUser.plan === "pro" ? (
               <button
@@ -752,6 +803,7 @@ export default function PRDStudio() {
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           currentUser={currentUser}
+          sessionTimeoutMinutes={sessionTimeoutMinutes}
           onLogout={handleLogoutRequest}
         />
 
